@@ -1,0 +1,1 @@
+-m local-dev --host 127.0.0.1 --middleware [cider.nrepl/cider-middleware,nrebl.middleware/wrap-nrebl,refactor-nrepl.middleware/wrap-refactor] --interactive --color
