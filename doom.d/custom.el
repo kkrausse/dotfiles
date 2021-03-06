@@ -4,7 +4,17 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(safe-local-variable-values
-   '((eval font-lock-add-keywords nil
+   '((eval define-clojure-indent
+           (codepoint-case 'defun))
+     (cider-clojure-cli-global-options . "-M:test:local-dev")
+     (cider-clojure-cli-global-options . "-M:test:dev:local-dev")
+     (cider-known-endpoints
+      ("client" "localhost" "34567"))
+     (cider-ns-refresh-before-fn . "user/stop")
+     (cider-ns-refresh-after-fn . "user/start")
+     (cider-clojure-cli-global-options . "-A:test:dev:local-dev")
+     (cider-preferred-build-tool . clojure-cli)
+     (eval font-lock-add-keywords nil
            `((,(concat "("
                        (regexp-opt
                         '("sp-do-move-op" "sp-do-move-cl" "sp-do-put-op" "sp-do-put-cl" "sp-do-del-op" "sp-do-del-cl")
@@ -34,5 +44,6 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(default ((t (:background "#221414"))))
  '(bg ((((class color) (min-colors 257)) (:foreground "#568751")) (((class color) (min-colors 256)) (:foreground "#6b8247")) (((class color) (min-colors 16)) (:foreground "#6b8247"))))
  '(doom-modeline-buffer-project-root ((((class color) (min-colors 257)) (:foreground "#7bc275" :weight bold)) (((class color) (min-colors 256)) (:foreground "#99bb66" :weight bold)) (((class color) (min-colors 16)) (:foreground "#99bb66" :weight bold)))))

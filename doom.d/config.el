@@ -21,6 +21,15 @@
 ;; don't prompt on exit
 (setq confirm-kill-emacs nil)
 
+(use-package! golden-ratio
+  :after-call pre-command-hook
+  :config
+  (golden-ratio-mode +1)
+  ;; Using this hook for resizing windows is less precise than
+  ;; `doom-switch-window-hook'.
+  (remove-hook 'window-configuration-change-hook #'golden-ratio)
+  (add-hook 'doom-switch-window-hook #'golden-ratio))
+
 ;; sets comma as spc m
 (setq evil-snipe-override-evil-repeat-keys nil)
 (setq doom-localleader-key ",")
@@ -34,93 +43,11 @@
 (key-chord-mode 1)
 (setq key-chord-one-key-delay 0.4)
 
+;; load paredit
+(load "~/.doom.d/kevin/kevin-paredit.el")
+
 (load-theme 'my-vibrant t)
-
-(evil-define-state kevin-paredit
-  "Lisp state.
- Used to navigate lisp code and manipulate the sexp tree."
-  :tag " <L> "
-  :suppress-keymap t
-  :cursor (bar . 2)
-  (if (evil-lisp-state-p) (smartparens-mode)))
-
-(defun kevin-paredit-state-toggle ()
-  "Toggle the lisp state."
-  (interactive)
-  (if (eq 'kevin-paredit evil-state)
-      (progn
-        (message "state: lisp -> normal")
-        (evil-normal-state))
-    (message "state: %s -> lisp" evil-state)
-    (evil-kevin-paredit-state)))
-
-(mapc (lambda (binding)
-        (define-key evil-kevin-paredit-state-map (kbd (car binding)) (eval (cadr binding) t)))
-      '(("B" 'sp-backward-barf-sexp)
-        ("b" 'sp-forward-barf-sexp)
-        ("s" 'sp-forward-slurp-sexp)
-        ("S" 'sp-backward-slurp-sexp)
-        ("t" 'sp-transpose-sexp)
-        ("w" 'sp-wrap)
-        ("[" 'sp-wrap-square)
-        ("{" 'sp-wrap-curly)
-        ;; movement
-        ("h" 'sp-backward-sexp)
-        ("l" 'sp-forward-sexp)
-        ("k" 'sp-backward-up-sexp)
-        ("j" 'sp-down-sexp)
-        ("i" (lambda () (interactive) (kevin-paredit-state-toggle) (evil-insert)))
-        ("." 'kevin-paredit-state-toggle)))
-
-(define-minor-mode kevin-paredit-mode
-  "paredit mode"
-  :init-value t
-  :lighter " kevin paredit"
-  :keymap (let ((map (make-sparse-keymap)))
-            (mapc (lambda (binding)
-                    (define-key map (kbd (car binding)) (eval (cadr binding) t)))
-                  '(("B" 'sp-backward-barf-sexp)
-                    ("b" 'sp-forward-barf-sexp)
-                    ("s" 'sp-forward-slurp-sexp)
-                    ("S" 'sp-backward-slurp-sexp)
-                    ("t" 'sp-transpose-sexp)
-                    ("w" 'sp-wrap)
-                    ("[" 'sp-wrap-square)
-                    ("{" 'sp-wrap-curly)
-                    ;; movement
-                    ("h" 'sp-backward-sexp)
-                    ("l" 'sp-forward-sexp)
-                    ("k" 'sp-backward-up-sexp)
-                    ("j" 'sp-down-sexp)
-                    ("i" (lambda () (interactive) (kevin-paredit-mode) (evil-insert)))
-                    ("." 'kevin-paredit-mode)))
-            map)
-  :after-hook (if kevin-paredit-mode
-                  (progn
-                    (print "fudging alist")
-                    (setq evil-move-beyond-eol t)
-                    (setq minor-mode-map-alist (assq-delete-all 'kevin-paredit-mode minor-mode-map-alist))
-                    (add-to-list 'minor-mode-map-alist '(kevin-paredit-mode kevin-paredit-mode-map)))
-                  (setq evil-move-beyond-eol nil)))
-
-;;(defadvice load (:after))
-(print (mapcar (lambda (x) (car x)) minor-mode-map-alist))
-;; (define-globalized-minor-mode kevin-paredit-global-mode kevin-paredit-mode
-;;   (lambda ()
-;;     (if (not (minibufferp (current-buffer)))
-;;         (kevin-paredit-mode -1))))
-;;(define-globalized-minor-mode global-kevin-paredit-mode kevin-paredit-mode kevin-paredit-mode)
-(define-advice load (:around (orig-fun &rest args) paredit-overried)
-  (setq minor-mode-map-alist (assq-delete-all 'kevin-paredit-mode minor-mode-map-alist))
-  (add-to-list 'minor-mode-map-alist '(kevin-paredit-mode kevin-paredit-mode-map))
-  (apply orig-fun args))
-
-(add-to-list 'emulation-mode-map-alists '(kevin-paredit-mode kevin-paredit-mode-map))
-
-(map! :mode evil-normal-state-map
-      :leader
-      "k"
-      #'kevin-paredit-mode)
+(custom-set-faces! `(default :background ,(doom-darken 'bg-alt 0.01)))
 
 (eval-js "console.log('wtf')")
 
@@ -140,9 +67,55 @@
 (remove-hook! '(prog-mode-hook text-mode-hook conf-mode-hook)
   #'display-line-numbers-mode)
 
+;; idk they recommend company mode on the homepage
+(global-company-mode)
+(setq cider-inject-dependencies-at-jack-in nil)
+(define-advice cider-jack-in-params (:around (orig-fun project-type) jack-in-param-advice)
+  ;; this is because they got rid of cider-clojure-cli-parameters
+  "-M:test:dev:local-dev")
+
+(setq cider-jack-in-dependencies nil)
+(setq cider-jack-in-auto-inject-clojure nil)
+(setq clojure-toplevel-inside-comment-form t)
+
+(map! :mode clojure-mode
+      :localleader
+      "e." #'cider-eval-list-at-point
+      "ef" #'cider-eval-defun-at-point
+      "en" #'cider-eval-ns-form)
+
+(map! :mode (emacs-lisp-mode)
+      :localleader
+      "gg" #'elisp-slime-nav-find-elisp-thing-at-point
+      "gb" #'xref-pop-marker-stack)
+
+;; actually looks kind of sick to customize
+;; https://github.com/seagle0128/doom-modeline
+;; if I'm always running terminals in here it could be nice to get it real nice
+(after! doom-modeline-mode
+  (doom-modeline-init))
+
+;; TODO replicate:
+;; (spacemacs|forall-clojure-modes m
+;;     (spacemacs/set-leader-keys-for-major-mode m
+;;       "e." 'cider-eval-list-at-point
+;;       "lm" 'kevin-macroexpand-all
+;;       "lp" 'kevin-pprint
+;;       "lt" 'kevin-test
+;;       "fu" 'lsp-find-references
+;;       "fd" 'lsp-find-definition
+;;       ))
 
 ;; TODO
-;; - mini paredit mode
+;; - popup for cider errors instead of other window
+;; - move buffer 1,2,3,4,5,6...
+;; - make symbols that cider doesn't recognise be a different color. e.g. async-clj/go-ctch
+;; - clojure errors go to popwin
+;; - investigate difference between clojure-layer and clojure-mode to bring back useful keybindings
+;;      - might need to change clojure major mode's leader?
+;; - format buffer with smartparens (bc it does that somehow)
+;;      - of integrate cljfmt, or something. ask imre if there's a standard config
+;; - eval sexp around point
 ;; - advice for dired, select file, do delete all dired buffers so back buffer works
 ;;
 ;;

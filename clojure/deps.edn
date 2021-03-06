@@ -4,10 +4,9 @@
  :mvn/repos {"sonatype" {:url "https://oss.sonatype.org/content/repositories/snapshots/"}}
  :aliases   {:local-dev          {
                                   :extra-deps {
-                                               ;;kevin-goto/kevin-goto         {:local/root "../kevin-goto"}
                                                ;; local dev version I have symlinked to ~/Documents/me/kev-nrepl
-											                         kevonavin/kev-repl            {:git/url "https://github.com/kevonavin/kev-nrepl.git"
-											                                                        :sha     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+                                  #_#_             kevonavin/kev-repl            {:git/url "https://github.com/kevonavin/kev-nrepl.git"
+                                                                              :sha     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
 
                                                babashka/process              {:mvn/version "0.0.1"}
                                                babashka/fs                   {:mvn/version "0.0.1"}
@@ -28,7 +27,8 @@
                                                ;; ,refactor-nrepl.middleware/wrap-refactor
                                                cider/cider-nrepl             {:mvn/version "0.25.5"}}
                                   :jvm-opts ["-Xmx3g" "-Xss300m"]
-                                  :main-opts  ["-m" "nrepl.cmdline" "--middleware" "[cider.nrepl/cider-middleware,kev-nrepl.nrepl/middleware,vlaaad.reveal.nrepl/middleware]" "--interactive" "--color"]
+                                  :main-opts  ["-m" "nrepl.cmdline" "--middleware" "[cider.nrepl/cider-middleware,vlaaad.reveal.nrepl/middleware]" "--interactive" "--color"]
+                                 ;; :main-opts  ["-m" "nrepl.cmdline" "--middleware" "[cider.nrepl/cider-middleware,kev-nrepl.nrepl/middleware,vlaaad.reveal.nrepl/middleware]" "--interactive" "--color"]
                                   }
              :local-dev-services {
                                   :extra-deps {

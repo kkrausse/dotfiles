@@ -34,7 +34,7 @@ determine the exact padding."
   "A dark theme based off of doom-one with more vibrant colors."
 
   ;; name        gui       256       16
-  ((bg         '("#252222" nil       nil)) ;; current line hightlighted & dired
+  ((bg         '("#322222" nil       nil)) ;; current line hightlighted & dired
    (bg-alt     '("#231515" nil       nil)) ;; true background color
    (base0      '("#1c1f24" "#101010" "black"        ))
    (base1      '("#1c1f24" "#1e1e1e" "brightblack"  ))
@@ -77,7 +77,7 @@ determine the exact padding."
    (strings        green)
    (variables      teal)
    (numbers        orange)
-   (region         "#3d4451")
+   (region         "#5d4451")
    (error          red)
    (warning        yellow)
    (success        green)
@@ -88,11 +88,22 @@ determine the exact padding."
    ;; custom categories
    (hidden     `(,(car bg) "black" "black"))
    (hidden-alt `(,(car bg-alt) "black" "black"))
-   (-modeline-pad
-    (when doom-vibrant-padded-modeline
-      (if (integerp doom-vibrant-padded-modeline) doom-vibrant-padded-modeline 4)))
+   (-modeline-pad 1)
 
-   (modeline-fg     "#bbc2cf")
+   ;; File-name
+;;   (doom-modeline-project-dir :bold t :foreground cyan)
+;;   (doom-modeline-buffer-path :inherit 'bold :foreground green)
+;;   (doom-modeline-buffer-file :inherit 'bold :foreground fg)
+;;   (doom-modeline-buffer-modified :inherit 'bold :foreground yellow)
+   ;; ;; Misc
+   ;; (doom-modeline-error :background bg)
+   ;; (doom-modeline-buffer-major-mode :foreground green :bold t)
+   ;; (doom-modeline-info :bold t :foreground cyan)
+   ;; (doom-modeline-bar :background (doom-darken green 0.2))
+   ;; (doom-modeline-panel :background (doom-darken green 0.2) :foreground fg)
+
+
+   (modeline-fg     "#dbc2cf")
    (modeline-fg-alt (doom-blend blue grey (if doom-vibrant-brighter-modeline 0.4 0.08)))
 
    (modeline-bg
@@ -106,23 +117,29 @@ determine the exact padding."
    (modeline-bg-inactive   (doom-darken bg 0.25))
    (modeline-bg-inactive-l `(,(doom-darken (car bg-alt) 0.2) ,@(cdr base0))))
 
-
   ;; --- extra faces ------------------------
   (((all-the-icons-dblue &override) :foreground dark-cyan)
    (centaur-tabs-unselected :background bg-alt :foreground base6)
    (elscreen-tab-other-screen-face :background "#353a42" :foreground "#1e2022")
 
+   ;; lisp
+   (highlight-quoted-symbol :foreground (doom-darken yellow 0.15))
+
+   ;;;;;;;; Editor ;;;;;;;;
+   (cursor :background "white")
+   (hl-line :background bg-alt)
 
    ;;;;;;;; Brackets ;;;;;;;;
    ;; Rainbow-delimiters
 
    (rainbow-delimiters-depth-1-face :foreground (doom-lighten red 0.5))
    (rainbow-delimiters-depth-2-face :foreground yellow)
-   (rainbow-delimiters-depth-3-face :foreground cyan)
-   (rainbow-delimiters-depth-4-face :foreground green)
+   (rainbow-delimiters-depth-3-face :foreground (doom-lighten cyan 0.2))
+   (rainbow-delimiters-depth-4-face :foreground (doom-lighten red 0.5))
    (rainbow-delimiters-depth-5-face :foreground yellow)
    (rainbow-delimiters-depth-6-face :foreground cyan)
-   (rainbow-delimiters-depth-7-face :foreground green)
+   (rainbow-delimiters-depth-3-face :foreground (doom-lighten cyan 0.2))
+   (rainbow-delimiters-depth-4-face :foreground (doom-lighten red 0.5))
    ;; Bracket pairing
    ((show-paren-match &override) :foreground nil :background base5 :bold t)
    ((show-paren-mismatch &override) :foreground nil :background "red")
@@ -143,26 +160,18 @@ determine the exact padding."
    ((line-number &override) :foreground base4)
    ((line-number-current-line &override) :foreground blue :bold bold)
 
-   (doom-modeline-bar :background (if doom-vibrant-brighter-modeline modeline-bg highlight))
-   (doom-modeline-buffer-path :foreground (if doom-vibrant-brighter-modeline base8 blue) :bold bold)
+   (doom-modeline-bar :background modeline-bg)
+   (doom-modeline-buffer-path :foreground base8 :bold bold)
 
    (mode-line
     :background modeline-bg :foreground modeline-fg
-    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg)))
+    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,(doom-darken blue 0.6))))
    (mode-line-inactive
     :background modeline-bg-inactive :foreground modeline-fg-alt
-    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-inactive)))
+    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,(doom-darken blue 0.7))))
    (mode-line-emphasis
     :foreground (if doom-vibrant-brighter-modeline base8 highlight))
 
-   (solaire-mode-line-face
-    :inherit 'mode-line
-    :background modeline-bg-l
-    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-l)))
-   (solaire-mode-line-inactive-face
-    :inherit 'mode-line-inactive
-    :background modeline-bg-inactive-l
-    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-inactive-l)))
 
    (whitespace-empty :background base2)
 
