@@ -80,7 +80,11 @@
 
 (map! :mode clojure-mode
       :localleader
-      "e." #'cider-eval-list-at-point
+      "e." (lambda (&optional output-to-current-buffer)
+             (interactive "P")
+             (save-excursion
+               (goto-char (- (cadr (cider-list-at-point 'bounds)) 1))
+               (cider-eval-last-sexp output-to-current-buffer)))
       "ef" #'cider-eval-defun-at-point
       "en" #'cider-eval-ns-form)
 
@@ -108,6 +112,8 @@
 
 ;; TODO
 ;; - popup for cider errors instead of other window
+;; - multiterm keybindings and alias it to just "term"
+;; - get doom-modeline working
 ;; - move buffer 1,2,3,4,5,6...
 ;; - make symbols that cider doesn't recognise be a different color. e.g. async-clj/go-ctch
 ;; - clojure errors go to popwin

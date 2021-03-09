@@ -4,7 +4,8 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(safe-local-variable-values
-   '((eval define-clojure-indent
+   '((cider-clojure-cli-global-options . "-A:test:dev:http-drivers:local-dev")
+     (eval define-clojure-indent
            (codepoint-case 'defun))
      (cider-clojure-cli-global-options . "-M:test:local-dev")
      (cider-clojure-cli-global-options . "-M:test:dev:local-dev")
