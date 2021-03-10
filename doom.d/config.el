@@ -1,10 +1,5 @@
 ;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
-
-;; Some functionality uses this to identify you, e.g. GPG configuration, email
-;; clients, file templates and snippets.
-(setq user-full-name "John Doe"
-      user-mail-address "john@doe.com")
-
+;;
 ;; Doom exposes five (optional) variables for controlling fonts in Doom. Here
 ;; are the three important ones:
 ;;
@@ -20,15 +15,6 @@
 
 ;; don't prompt on exit
 (setq confirm-kill-emacs nil)
-
-(use-package! golden-ratio
-  :after-call pre-command-hook
-  :config
-  (golden-ratio-mode +1)
-  ;; Using this hook for resizing windows is less precise than
-  ;; `doom-switch-window-hook'.
-  (remove-hook 'window-configuration-change-hook #'golden-ratio)
-  (add-hook 'doom-switch-window-hook #'golden-ratio))
 
 ;; sets comma as spc m
 (setq evil-snipe-override-evil-repeat-keys nil)
@@ -96,8 +82,21 @@
 ;; actually looks kind of sick to customize
 ;; https://github.com/seagle0128/doom-modeline
 ;; if I'm always running terminals in here it could be nice to get it real nice
-(after! doom-modeline-mode
-  (doom-modeline-init))
+(use-package doom-modeline
+  :ensure t
+  :init (doom-modeline-mode 1)
+
+  ;; this sets column in modeline!
+  (column-number-mode)
+  (setq doom-modeline-height 1)
+  (set-face-attribute 'mode-line nil :height 100)
+  (set-face-attribute 'mode-line-inactive nil :height 100)
+  (face-attribute 'mode-line :height)
+  (setq doom-modeline-percent-position nil)
+  (buffer-local-value 'mode-line-format (current-buffer))
+  (doom-modeline-def-modeline 'main
+    '(bar window-number matches buffer-info remote-host buffer-position word-count parrot selection-info)
+    '(misc-info persp-name grip irc mu4e gnus debug repl lsp minor-modes input-method indent-info major-mode process vcs)))
 
 ;; TODO replicate:
 ;; (spacemacs|forall-clojure-modes m
@@ -113,7 +112,6 @@
 ;; TODO
 ;; - popup for cider errors instead of other window
 ;; - multiterm keybindings and alias it to just "term"
-;; - get doom-modeline working
 ;; - move buffer 1,2,3,4,5,6...
 ;; - make symbols that cider doesn't recognise be a different color. e.g. async-clj/go-ctch
 ;; - clojure errors go to popwin
@@ -124,6 +122,8 @@
 ;; - eval sexp around point
 ;; - advice for dired, select file, do delete all dired buffers so back buffer works
 ;;
+;; DONE
+;; x get doom-modeline working
 ;;
 ;; Here are some additional functions/macros that could help you configure Doom:
 ;;

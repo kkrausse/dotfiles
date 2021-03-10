@@ -33,6 +33,15 @@
 (package! smartparens)
 (package! evil-smartparens)
 (package! doom-modeline)
+(use-package! golden-ratio
+  :after-call pre-command-hook
+  :config
+  (golden-ratio-mode +1)
+  ;; Using this hook for resizing windows is less precise than
+  ;; `doom-switch-window-hook'.
+  (remove-hook 'window-configuration-change-hook #'golden-ratio)
+  (add-hook 'doom-switch-window-hook #'golden-ratio))
+
 ;; You can override the recipe of a built in package without having to specify
 ;; all the properties for `:recipe'. These will inherit the rest of its recipe
 ;; from Doom or MELPA/ELPA/Emacsmirror:

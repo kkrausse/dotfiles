@@ -21,13 +21,14 @@
                                                ;;add-lib3 branch!
                                                org.clojure/tools.deps.alpha  ^:depot/ignore {:git/url "https://github.com/clojure/tools.deps.alpha.git"
                                                                                              :sha     "d77476f3d5f624249462e275ae62d26da89f320b"}
-                                               vlaaad/reveal                 {:mvn/version "1.3.195"}
+                                               vlaaad/reveal                 {:mvn/version "1.3.196"}
                                                nrepl/nrepl                   {:mvn/version "0.8.3"}
                                                ;;                                               refactor-nrepl/refactor-nrepl {:mvn/version "2.5.1"}
                                                ;; ,refactor-nrepl.middleware/wrap-refactor
-                                               cider/cider-nrepl             {:mvn/version "0.25.5"}}
+                                               cider/cider-nrepl             {:mvn/version "0.25.9"}}
                                   :jvm-opts ["-Xmx3g" "-Xss300m"]
-                                  :main-opts  ["-m" "nrepl.cmdline" "--middleware" "[cider.nrepl/cider-middleware,vlaaad.reveal.nrepl/middleware]" "--interactive" "--color"]
+								  ;; I kind of think that cider-middleware has to be last? bc some weird shit with an invisible cache was happening
+                                  :main-opts  ["-m" "nrepl.cmdline" "--middleware" "[vlaaad.reveal.nrepl/middleware,cider.nrepl/cider-middleware]" "--interactive" "--color"]
                                  ;; :main-opts  ["-m" "nrepl.cmdline" "--middleware" "[cider.nrepl/cider-middleware,kev-nrepl.nrepl/middleware,vlaaad.reveal.nrepl/middleware]" "--interactive" "--color"]
                                   }
              :local-dev-services {
