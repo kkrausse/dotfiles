@@ -22,25 +22,37 @@
 ;  :recipe (:host github :repo "username/repo"
 ;           :files ("some-file.el" "src/lisp/*.el")))
 
+(unpin! company
+        org-mode)
+
 (package! clj-refactor :disable 1)
 (package! dired-du)
 (package! key-chord)
 (package! doom-themes)
+
+(package! company
+  :recipe (:host github
+           :repo "company-mode/company-mode"
+           :branch "master"))
+
+(package! org-mode
+  :recipe (:host nil
+           :repo "https://code.orgmode.org/bzg/org-mode"))
+
+(package! org-roam
+  :recipe (:host nil
+           :repo "https://github.com/org-roam/org-roam"))
+
+(package! org-bullets)
+
 ;; navigation?
 (package! elisp-slime-nav)
 (package! eldoc)
-(package! golden-ratio)
+(package! zoom)
 (package! smartparens)
+(package! aggressive-indent-mode)
 (package! evil-smartparens)
 (package! doom-modeline)
-(use-package! golden-ratio
-  :after-call pre-command-hook
-  :config
-  (golden-ratio-mode +1)
-  ;; Using this hook for resizing windows is less precise than
-  ;; `doom-switch-window-hook'.
-  (remove-hook 'window-configuration-change-hook #'golden-ratio)
-  (add-hook 'doom-switch-window-hook #'golden-ratio))
 
 ;; You can override the recipe of a built in package without having to specify
 ;; all the properties for `:recipe'. These will inherit the rest of its recipe
