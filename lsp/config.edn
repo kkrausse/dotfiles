@@ -1,0 +1,10 @@
+{
+ :cljfmt {
+          :indentation?                          true
+          :remove-trailing-whitespace?           true
+          :remove-surrounding-whitespace?        true
+          :remove-consecutive-blank-lines?       false
+          :remove-multiple-non-indenting-spaces? false
+          ;; :split-keypairs-over-multiple-lines?   true
+          }
+ }

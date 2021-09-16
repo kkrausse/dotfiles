@@ -120,6 +120,7 @@ export PATH="$HOME/.jenv/bin:$PATH"
 
 # release email stuff
 export PATH="$HOME/bin/wp-pro-bin:$PATH"
+
 eval "$(jenv init -)"
 export SBT_OPTS=-Xmx4G
 export AWS_PROFILE=services
@@ -137,4 +138,3 @@ export SOPS_KMS_ARN=arn:aws:kms:us-west-2:738720058982:alias/util/helm-secrets/s
 # doom stuff
 # doom sync, etc.
 export PATH="$HOME/.emacs.d/bin:$PATH"
-

@@ -37,7 +37,10 @@
 (js-cleanup)
 (require 'smartparens-config)
 
-(evil-smartparens-mode)
+;;(evil-record-macro)
+;; there's also evil-execute-macro
+;; a more generic macro recording / saving / replaying could be super useful
+
 
 ;; (eval-js-file)
 ;; TODO replicate:

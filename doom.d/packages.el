@@ -22,13 +22,19 @@
 ;  :recipe (:host github :repo "username/repo"
 ;           :files ("some-file.el" "src/lisp/*.el")))
 
-(unpin! company
-        org-mode)
 
 (package! clj-refactor :disable 1)
 (package! dired-du)
 (package! key-chord)
 (package! doom-themes)
+
+(package! lsp-mode)
+
+(package! browse-at-remote
+  :pin "cef26f2c063f2473af42d0e126c8613fe2f709e4"
+  :recipe (:host github
+           :repo "rmuslimov/browse-at-remote"
+           :branch "master"))
 
 (package! company
   :recipe (:host github

@@ -12,6 +12,36 @@
 
   (setq org-src-tab-acts-natively t)
 
+(defconst cue-keywords
+  '("package" "import" "for" "in" "if" "let"))
+
+(defconst cue-constants '("null" "true" "false"))
+
+(defconst cue-types
+  '("int" "float" "string" "bool" "bytes"))
+
+(defvar cue--font-lock-keywords
+  `(("//.*" . font-lock-comment-face)
+    (,(regexp-opt cue-constants 'symbols) . font-lock-constant-face)
+    (,(regexp-opt cue-keywords 'symbols) . font-lock-keyword-face)
+    (,(regexp-opt cue-types 'symbols) . font-lock-type-face)))
+
+;;;###autoload
+(define-derived-mode cue-mode prog-mode "CUE"
+  "Major mode for the CUE language."
+
+  ;; Comments
+  (setq-local comment-start "// ")
+  (setq-local comment-end "")
+  (setq-local comment-start-skip "//[[:space:]]*")
+
+  (setq indent-tabs-mode t)
+
+  (setq-local font-lock-defaults '(cue--font-lock-keywords)))
+
+;;;###autoload
+(add-to-list 'auto-mode-alist '("\\.cue\\'" . cue-mode))
+
 ;;(use-package zoom
 ;;  :hook (doom-first-input . zoom-mode)
 ;;  :config
@@ -98,7 +128,7 @@
 
 (general-define-key
  :states '(normal visual)
- :keymaps 'override
+ :keymaps 'global
  :prefix "SPC"
  "k" 'kevin-paredit-mode)
 
@@ -114,6 +144,9 @@
 (key-chord-mode 1)
 (setq key-chord-one-key-delay 0.4)
 
+;; github yank line link
+;; (setq browse-at-remote-remote-type-domains
+;;       (cons '("github.dev.pages" . "github") browse-at-remote-remote-type-domains))
 ;; dont prompt on exit
 (setq confirm-kill-emacs nil)
 ;; when exit insert mode exit
@@ -122,6 +155,12 @@
 (setq display-line-numbers-type nil)
 (remove-hook! '(prog-mode-hook text-mode-hook conf-mode-hook)
   #'display-line-numbers-mode)
+
+(use-package browse-at-remote
+  :config
+  (setq browse-at-remote-remote-type-regexps
+        (cons '("github\\dev\\.pages$" . "github")
+              browse-at-remote-remote-type-regexps)))
 
 (use-package! company
   :config
@@ -139,8 +178,8 @@
 
 (setq org-startup-folded 't)
 
+(setq org-roam-v2-ack t)
 (use-package org-roam
-  :ensure t
   :hook
   ;; this builds the cache
   (after-init . org-roam-mode)
@@ -183,6 +222,33 @@
                (cider-pprint-form-to-comment 'cider-last-sexp nil)))
       "en" #'cider-eval-ns-form)
 
+;; (use-package lsp-mode
+;;   :ensure t
+;;   :hook ((clojure-mode . lsp)
+;;          (clojurec-mode . lsp)
+;;          (clojurescript-mode . lsp))
+;;   :commands lsp
+;;   :config
+;;   ;; add paths to your local installation of project mgmt tools, like lein
+
+;;   ;;(setq lsp-keymap-prefix "C-l")
+;;   (setq gc-cons-threshold (* 100 1024 1024)
+;;         read-prcess-output-max (* 1024 1024))
+
+;;   ;; from https://www.youtube.com/watch?v=grL3DQyvneI&ab_channel=LondonClojurians
+;;   (setq cider-eldoc-display-for-symbol-at-point nil ; disable cider eldoc
+;;         )
+
+;;   ;; necessary for showing references without relative path
+;;   (setq ivy-xref-use-file-path t)
+;;   (setq xref-file-name-display 'project-relative)
+
+;;   (dolist (m '(clojure-mode
+;;                clojurec-mode
+;;                clojurescript-mode
+;;                clojurex-mode))
+;;      (add-to-list 'lsp-language-id-configuration `(,m . "clojure"))))
+
 (add-hook! clojure-mode
   (aggressive-indent-mode)
   ;; cider mode might be slow eval still works so gonna try disabling
@@ -195,14 +261,23 @@
   (setq clojure-align-forms-automatically t)
 
   (define-clojure-indent
-    (do-template 1)
+    (into 1)
+    (do-template :form)
+    (comment 1)
     (macrolet '(1 ((:defn)) nil))))
+
+(define-advice aggressive-indent--indent-if-changed (:around (orig-fun buffer) aggressive-indent-advice)
+  (when (not (with-current-buffer buffer
+           (evil-insert-state-p)))
+    (funcall orig-fun buffer)))
 
 (setq cider-inject-dependencies-at-jack-in nil)
 (setq cider-jack-in-dependencies nil)
 (setq cider-jack-in-auto-inject-clojure nil)
 (define-advice cider-jack-in-params (:around (orig-fun project-type) jack-in-param-advice)
-  "-M:test:dev:local-dev")
+  (pcase project-type
+    ('clojure-cli "-M:test:dev:local-dev")
+    (_ (funcall orig-fun project-type))))
 
 ;;(setq cider-comment-prefix "\n;; => ")
 (use-package cider
