@@ -1,10 +1,11 @@
-{
- :cljfmt {
-          :indentation?                          true
-          :remove-trailing-whitespace?           true
-          :remove-surrounding-whitespace?        true
-          :remove-consecutive-blank-lines?       false
-          :remove-multiple-non-indenting-spaces? false
-          ;; :split-keypairs-over-multiple-lines?   true
-          }
+{:log-path "/tmp/clojure-lsp.out"
+ :cljfmt   {
+            :indentation?                          true
+            :remove-trailing-whitespace?           true
+            :remove-surrounding-whitespace?        false
+            :remove-consecutive-blank-lines?       false
+            :remove-multiple-non-indenting-spaces? false
+            :align-associative?                    true
+            ;; :split-keypairs-over-multiple-lines?   true
+            }
  }

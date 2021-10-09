@@ -115,13 +115,9 @@ ZSH_THEME_GIT_PROMPT_SUFFIX=""
 export PATH=$HOME/bin:$PATH
 export PATH=~/bin/just-v0.8.3-x86_64-apple-darwin:$PATH
 
-# jenv dope stuff
-export PATH="$HOME/.jenv/bin:$PATH"
-
 # release email stuff
 export PATH="$HOME/bin/wp-pro-bin:$PATH"
 
-eval "$(jenv init -)"
 export SBT_OPTS=-Xmx4G
 export AWS_PROFILE=services
 
@@ -138,3 +134,7 @@ export SOPS_KMS_ARN=arn:aws:kms:us-west-2:738720058982:alias/util/helm-secrets/s
 # doom stuff
 # doom sync, etc.
 export PATH="$HOME/.emacs.d/bin:$PATH"
+
+#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
+export SDKMAN_DIR="$HOME/.sdkman"
+[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"

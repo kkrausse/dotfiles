@@ -56,7 +56,6 @@
 (custom-set-faces! `(default :background ,(doom-darken 'bg-alt 0.01)))
 
 (use-package doom-modeline
-  :ensure t
   :init (doom-modeline-mode 1)
 
   ;; this sets column in modeline!
@@ -68,9 +67,10 @@
   (setq doom-modeline-percent-position nil)
   (buffer-local-value 'mode-line-format (current-buffer))
 
+;; got rid of lsp, major-mode, misc-info
   (doom-modeline-def-modeline 'main
     '(bar window-number matches buffer-info remote-host buffer-position word-count parrot selection-info)
-    '(misc-info persp-name grip irc mu4e gnus debug repl lsp minor-modes input-method indent-info major-mode process vcs)))
+    '(persp-name grip irc mu4e gnus debug repl minor-modes input-method indent-info process vcs)))
 
 (add-hook! 'term-mode-hook
            'doom-modeline-mode)
@@ -151,6 +151,16 @@
 (setq confirm-kill-emacs nil)
 ;; when exit insert mode exit
 (setq evil-move-cursor-back t)
+;; c source directory so it doesn't prompt each time
+(setq find-function-C-source-directory "~/Documents/me/emacs-build/emacs-ng-2/src")
+
+;; flycheck has horrible perf.. maybe?
+(setq flycheck-check-syntax-automatically '(save idle-change))
+
+(setq kevin-project-root "johnson")
+(setq kevin-project-root-timer
+      (run-with-idle-timer 1 t (lambda () (setq kevin-project-root (projectile-project-root)))))
+(setq frame-title-format 'kevin-project-root)
 
 (setq display-line-numbers-type nil)
 (remove-hook! '(prog-mode-hook text-mode-hook conf-mode-hook)
@@ -159,7 +169,7 @@
 (use-package browse-at-remote
   :config
   (setq browse-at-remote-remote-type-regexps
-        (cons '("github\\dev\\.pages$" . "github")
+        (cons '("github.dev.pages$" . "github")
               browse-at-remote-remote-type-regexps)))
 
 (use-package! company
@@ -183,24 +193,20 @@
   :hook
   ;; this builds the cache
   (after-init . org-roam-mode)
+  (after-init . org-roam-db-autosync-mode)
   :custom
   (org-roam-directory "~/Documents/notes/org-roam")
-  :bind (:map org-roam-mode-map
+  :bind (:map org-roam-mode-map ;; this isn't a thing now
          (("C-c n l" . org-roam)
-          ("C-c n f" . org-roam-find-file)
           ("C-c n g" . org-roam-graph))
          :map org-mode-map
-         (("C-c n i" . org-roam-insert))
-         (("C-c n I" . org-roam-insert-immediate)))
+         (("C-c n i" . org-roam-insert)
+          ("C-c n I" . org-roam-insert-immediate)
+          ("C-c n c" . org-id-get-create)
+          ("C-c n f" . org-roam-node-find)))
   :config
   (setq org-roam-dailies-directory "daily/")
-
-  (setq org-roam-dailies-capture-templates
-        '(("d" "default" entry
-           #'org-roam-capture--get-point
-           "* %?"
-           :file-name "daily/%<%Y-%m-%d>"
-           :head "#+title: %<%Y-%m-%d>\n\n"))))
+  )
 
 (map! :mode emacs-lisp-mode
       :localleader
@@ -220,37 +226,51 @@
              (save-excursion
                (goto-char (- (cadr (cider-list-at-point 'bounds)) 0))
                (cider-pprint-form-to-comment 'cider-last-sexp nil)))
+      "et" (lambda (&optional output-to-current-buffer)
+             (interactive "P")
+             (cider-interactive-eval (concat "(clojure.test/test-vars [\n"
+                                             (cider-defun-at-point)
+                                             "])")
+                                     nil
+                                     (cider-defun-at-point 'bounds)
+                                     (cider--nrepl-pr-request-map)))
       "en" #'cider-eval-ns-form)
 
-;; (use-package lsp-mode
-;;   :ensure t
-;;   :hook ((clojure-mode . lsp)
-;;          (clojurec-mode . lsp)
-;;          (clojurescript-mode . lsp))
-;;   :commands lsp
-;;   :config
-;;   ;; add paths to your local installation of project mgmt tools, like lein
+(use-package lsp-mode
+  :hook ((clojure-mode . lsp)
+         (clojurec-mode . lsp)
+         (clojurescript-mode . lsp)
+         (lsp-mode . lsp-enable-which-key-integration))
+  :commands lsp
+  :config
+  ;; add paths to your local installation of project mgmt tools, like lein
 
-;;   ;;(setq lsp-keymap-prefix "C-l")
-;;   (setq gc-cons-threshold (* 100 1024 1024)
-;;         read-prcess-output-max (* 1024 1024))
+  ;; disable modeline diagnostics
+  ;; this takes a long time on a screen rerender. Plus I never use
+  (setq lsp-modeline-diagnostics-enable nil)
+  ;;(setq lsp-keymap-prefix "C-l")
+  (setq gc-cons-threshold (* 100 1024 1024)
+        read-prcess-output-max (* 1024 1024))
 
-;;   ;; from https://www.youtube.com/watch?v=grL3DQyvneI&ab_channel=LondonClojurians
-;;   (setq cider-eldoc-display-for-symbol-at-point nil ; disable cider eldoc
-;;         )
+  ;; from https://www.youtube.com/watch?v=grL3DQyvneI&ab_channel=LondonClojurians
+  (setq cider-eldoc-display-for-symbol-at-point nil ;; disable cider eldoc
+        cider-repl-display-help-banner nil      ;; disable help banner
+        ;; no header see https://emacs-lsp.github.io/lsp-mode/tutorials/how-to-turn-off/
+        lsp-headerline-breadcrumb-enable nil)
 
-;;   ;; necessary for showing references without relative path
-;;   (setq ivy-xref-use-file-path t)
-;;   (setq xref-file-name-display 'project-relative)
+  ;; necessary for showing references without relative path
+  (setq ivy-xref-use-file-path t)
+  (setq xref-file-name-display 'project-relative)
 
-;;   (dolist (m '(clojure-mode
-;;                clojurec-mode
-;;                clojurescript-mode
-;;                clojurex-mode))
-;;      (add-to-list 'lsp-language-id-configuration `(,m . "clojure"))))
+  (dolist (m '(clojure-mode
+               clojurec-mode
+               clojurescript-mode
+               clojurex-mode))
+     (add-to-list 'lsp-language-id-configuration `(,m . "clojure"))))
 
 (add-hook! clojure-mode
   (aggressive-indent-mode)
+  (hs-minor-mode)
   ;; cider mode might be slow eval still works so gonna try disabling
   (cider-mode)
 
@@ -268,18 +288,25 @@
 
 (define-advice aggressive-indent--indent-if-changed (:around (orig-fun buffer) aggressive-indent-advice)
   (when (not (with-current-buffer buffer
-           (evil-insert-state-p)))
+               (evil-insert-state-p)))
     (funcall orig-fun buffer)))
-
-(setq cider-inject-dependencies-at-jack-in nil)
-(setq cider-jack-in-dependencies nil)
-(setq cider-jack-in-auto-inject-clojure nil)
-(define-advice cider-jack-in-params (:around (orig-fun project-type) jack-in-param-advice)
-  (pcase project-type
-    ('clojure-cli "-M:test:dev:local-dev")
-    (_ (funcall orig-fun project-type))))
 
 ;;(setq cider-comment-prefix "\n;; => ")
 (use-package cider
   :config
-  (setq cider-comment-prefix "\n;; => "))
+  (setq cider-comment-prefix "\n;; => "
+        cider-repl-buffer-size-limit 100)
+
+  ;; this is to fix the cider jack in to by my own thing because they changed some
+  ;; version and got rid of =cider-clojure-cli-parameters=
+  (setq cider-inject-dependencies-at-jack-in nil)
+  (setq cider-jack-in-dependencies nil)
+  (setq cider-jack-in-auto-inject-clojure nil)
+(defvar kev-clojure-cli-param-hist '("-M:test:dev:local-dev" "-M:cljs")
+  "cider jack in params")
+(define-advice cider-jack-in-params (:around (orig-fun project-type) jack-in-param-advice)
+  (pcase project-type
+    ('clojure-cli (ivy-read "clojure cli params: "
+                               kev-clojure-cli-param-hist
+                               :history 'kev-clojure-cli-param-hist))
+    (_ (funcall orig-fun project-type)))))
