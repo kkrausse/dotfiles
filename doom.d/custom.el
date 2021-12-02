@@ -5,7 +5,10 @@
  ;; If there is more than one, they won't work right.
  '(projectile-enable-idle-timer nil)
  '(safe-local-variable-values
-   '((elisp-lint-indent-specs
+   '((cider-ns-refresh-after-fn . "dev/refresh-repl-prep!")
+     (cider-known-endpoints
+      ("client" "localhost" "34567"))
+     (elisp-lint-indent-specs
       (if-let* . 2)
       (when-let* . 1)
       (let* . defun)

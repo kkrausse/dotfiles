@@ -29,6 +29,7 @@
 (package! doom-themes)
 
 (package! lsp-mode)
+(package! lsp-ui)
 
 (package! browse-at-remote
   :pin "cef26f2c063f2473af42d0e126c8613fe2f709e4"

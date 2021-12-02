@@ -132,6 +132,17 @@
  :prefix "SPC"
  "k" 'kevin-paredit-mode)
 
+;; stolen from borkdude: https://github.https://github.com/borkdude/prelude/blob/master/personal/init.el#L195om/borkdude/prelude/blob/master/personal/init.el#L195
+(defun copy-file-name-to-clipboard ()
+  "Copy the current buffer file name to the clipboard."
+  (interactive)
+  (let ((filename (if (equal major-mode 'dired-mode)
+                      default-directory
+                    (buffer-file-name))))
+    (when filename
+      (kill-new filename)
+      (message "Copied buffer file name '%s' to the clipboard." filename))))
+
 ;; sets comma as spc m
 (setq evil-snipe-override-evil-repeat-keys nil)
 (setq doom-localleader-key ",")
@@ -195,13 +206,12 @@
   (after-init . org-roam-mode)
   (after-init . org-roam-db-autosync-mode)
   :custom
-  (org-roam-directory "~/Documents/notes/org-roam")
+  (org-roam-directory "~/Documents/worknotes/org-roam")
   :bind (:map org-roam-mode-map ;; this isn't a thing now
          (("C-c n l" . org-roam)
           ("C-c n g" . org-roam-graph))
          :map org-mode-map
-         (("C-c n i" . org-roam-insert)
-          ("C-c n I" . org-roam-insert-immediate)
+         (("C-c n i" . org-roam-node-insert)
           ("C-c n c" . org-id-get-create)
           ("C-c n f" . org-roam-node-find)))
   :config
@@ -211,6 +221,15 @@
 (map! :mode emacs-lisp-mode
       :localleader
       "gg" #'elisp-slime-nav-find-elisp-thing-at-point
+      "gb" #'pop-tag-mark)
+
+(setq flycheck-disabled-checkers '(emacs-lisp-checkdoc))
+
+(add-hook! js2-mode
+           (lsp))
+(map! :mode js2-mode
+      :localleader
+      "gg" 'js2-jump-to-definition
       "gb" #'pop-tag-mark)
 
 (map! :mode clojure-mode
@@ -227,6 +246,7 @@
                (goto-char (- (cadr (cider-list-at-point 'bounds)) 0))
                (cider-pprint-form-to-comment 'cider-last-sexp nil)))
       "et" (lambda (&optional output-to-current-buffer)
+             "run toplevel as clojure test"
              (interactive "P")
              (cider-interactive-eval (concat "(clojure.test/test-vars [\n"
                                              (cider-defun-at-point)
@@ -235,6 +255,30 @@
                                      (cider-defun-at-point 'bounds)
                                      (cider--nrepl-pr-request-map)))
       "en" #'cider-eval-ns-form)
+
+ (defun cider-jack-in-babashka ()
+  "Start an babashka nREPL server for the current project and connect to it."
+  (interactive)
+  (let* ((default-directory (project-root (project-current t)))
+         (process-filter (lambda (proc string)
+                           "Run cider-connect once babashka nrepl server is ready."
+                           (when (string-match "Started nREPL server at .+:\\([0-9]+\\)" string)
+                             (cider-connect-clj (list :host "localhost"
+                                                      :port (match-string 1 string)
+                                                      :project-dir default-directory)))
+                           ;; Default behavior: write to process buffer
+                           (internal-default-process-filter proc string))))
+    (set-process-filter
+       (start-file-process "babashka" "*babashka*" "bb" "--nrepl-server" "0")
+       process-filter)))
+
+(use-package lsp-ui
+  :commands lsp-ui-mode)
+
+;; really disable cider eldoc
+;; idk if this is actually needed anymore
+;; (define-advice cider-eldoc-setup (:around (orig-fun) cider-eldoc-advice)
+;;   nil)
 
 (use-package lsp-mode
   :hook ((clojure-mode . lsp)
@@ -247,16 +291,23 @@
 
   ;; disable modeline diagnostics
   ;; this takes a long time on a screen rerender. Plus I never use
-  (setq lsp-modeline-diagnostics-enable nil)
-  ;;(setq lsp-keymap-prefix "C-l")
-  (setq gc-cons-threshold (* 100 1024 1024)
-        read-prcess-output-max (* 1024 1024))
-
-  ;; from https://www.youtube.com/watch?v=grL3DQyvneI&ab_channel=LondonClojurians
-  (setq cider-eldoc-display-for-symbol-at-point nil ;; disable cider eldoc
+  (setq lsp-modeline-diagnostics-enable nil
+        ;; disable sideline thing
+;        lsp-clojure-custom-server-command '("bash" "-c" "./clojure-lsp") ; to locally test clojure-lsp
+        lsp-ui-sideline-enable nil
+        company-minimum-prefix-length 1
+        lsp-file-watch-threshold 10000
+        lsp-diagnostics-provider :none
+        gc-cons-threshold (* 100 1024 1024)
+        read-prcess-output-max (* 1024 1024)
+        ;; disable big obnoxious window at top
+        lsp-ui-doc-enable nil
+        ;; from https://www.youtube.com/watch?v=grL3DQyvneI&ab_channel=LondonClojurians
+        cider-eldoc-display-for-symbol-at-point nil ;; disable cider eldoc
         cider-repl-display-help-banner nil      ;; disable help banner
         ;; no header see https://emacs-lsp.github.io/lsp-mode/tutorials/how-to-turn-off/
-        lsp-headerline-breadcrumb-enable nil)
+        lsp-headerline-breadcrumb-enable nil
+        )
 
   ;; necessary for showing references without relative path
   (setq ivy-xref-use-file-path t)
@@ -266,7 +317,7 @@
                clojurec-mode
                clojurescript-mode
                clojurex-mode))
-     (add-to-list 'lsp-language-id-configuration `(,m . "clojure"))))
+    (add-to-list 'lsp-language-id-configuration `(,m . "clojure"))))
 
 (add-hook! clojure-mode
   (aggressive-indent-mode)
@@ -274,11 +325,10 @@
   ;; cider mode might be slow eval still works so gonna try disabling
   (cider-mode)
 
-  (setq clojure-toplevel-inside-comment-form t)
-
-  ;; code alignment
-
-  (setq clojure-align-forms-automatically t)
+  (setq clojure-toplevel-inside-comment-form t
+        ;; code alignment
+        clojure-align-forms-automatically t
+        )
 
   (define-clojure-indent
     (into 1)
@@ -292,6 +342,16 @@
     (funcall orig-fun buffer)))
 
 ;;(setq cider-comment-prefix "\n;; => ")
+(defvar kev-clojure-cli-param-hist '("-M:test:dev:local-dev"
+                                     "-M:cljs"
+                                     "-A:test:dev:local-dev -m nrepl.cmdline --middleware '[cider.nrepl/cider-middleware]' --interactive --color # no reveal for java8"
+                                     )
+  "cider jack in params")
+
+(setq kev-clojure-cli-param-hist '("-M:test:dev:local-dev" "-M:cljs"
+                                     "-A:test:dev:local-dev -m nrepl.cmdline --middleware '[cider.nrepl/cider-middleware]' --interactive --color # no reveal for java8"
+                                     ))
+
 (use-package cider
   :config
   (setq cider-comment-prefix "\n;; => "
@@ -302,11 +362,15 @@
   (setq cider-inject-dependencies-at-jack-in nil)
   (setq cider-jack-in-dependencies nil)
   (setq cider-jack-in-auto-inject-clojure nil)
-(defvar kev-clojure-cli-param-hist '("-M:test:dev:local-dev" "-M:cljs")
-  "cider jack in params")
-(define-advice cider-jack-in-params (:around (orig-fun project-type) jack-in-param-advice)
-  (pcase project-type
-    ('clojure-cli (ivy-read "clojure cli params: "
-                               kev-clojure-cli-param-hist
-                               :history 'kev-clojure-cli-param-hist))
-    (_ (funcall orig-fun project-type)))))
+  (define-advice cider-jack-in-params (:around (orig-fun project-type) jack-in-param-advice)
+    (pcase project-type
+      ('clojure-cli (ivy-read "clojure cli params: "
+                              kev-clojure-cli-param-hist
+                              :history 'kev-clojure-cli-param-hist))
+      (_ (funcall orig-fun project-type)))))
+
+(define-advice nrepl-start-server-process (:around (orig-fun directory cmd on-port-callback) nrepl-start-server-process-advice)
+  ;; insert prefix because sdkman doesn't insert the environment in emacs automatically
+  ;; idk how to set it for the current emacs shell. may not be possible
+  (let ((cmd-prefix "source \"$HOME/.sdkman/bin/sdkman-init.sh\" && { echo \"no\n\" | sdk env || echo 'no .sdkman?' } && sdk c java && "))
+    (funcall orig-fun directory (concat cmd-prefix cmd) on-port-callback)))
