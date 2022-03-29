@@ -113,6 +113,8 @@ ZSH_THEME_GIT_PROMPT_SUFFIX=""
 
 
 export PATH=$HOME/bin:$PATH
+# just to make brew have higher priority
+export PATH=/usr/local/bin:$PATH
 export PATH=~/bin/just-v0.8.3-x86_64-apple-darwin:$PATH
 
 # release email stuff
@@ -138,3 +140,16 @@ export PATH="$HOME/.emacs.d/bin:$PATH"
 #THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
 export SDKMAN_DIR="$HOME/.sdkman"
 [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
+
+# solana cli
+export PATH="/Users/kkrausse/.local/share/solana/install/active_release/bin:$PATH"
+alias sol=solana
+
+# required to compile some emacs stuff
+export PATH="/usr/local/opt/texinfo/bin:$PATH"
+
+# emacs 27 with native comp!
+export PATH="/usr/local/opt/emacs-plus@27/bin:$PATH"
+
+# emacs no window
+alias enw="emacs -nw"

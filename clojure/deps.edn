@@ -10,8 +10,8 @@
                            #_#_                                     kevonavin/kev-repl {:git/url "https://github.com/kevonavin/kev-nrepl.git"
                                                                                         :sha     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
                            lambdaisland/deep-diff2                  {:mvn/version "2.0.108"}
-                           babashka/process                         {:mvn/version "0.0.1"}
-                           babashka/fs                              {:mvn/version "0.0.1"}
+                           ;;babashka/process                         {:mvn/version "0.0.1"}
+                           ;;babashka/fs                              {:mvn/version "0.0.1"}
                            cheshire/cheshire                        {:mvn/version "5.10.0"}
                            org.clojure/data.csv                     {:mvn/version "1.0.0"}
                            http-kit/http-kit                        {:mvn/version "2.5.1"}
@@ -23,20 +23,21 @@
                            pjstadig/humane-test-output              {:mvn/version "0.11.0"}
                            ;; async profiler!
                            com.clojure-goes-fast/clj-async-profiler {:mvn/version "0.5.1"}
-                           #_#_
+                           ;;#_#_
                            lambdaisland/classpath                   {:git/url "https://github.com/lambdaisland/classpath"
                                                                      :sha     "ff96d4f07d5b12b2fe0d8b206eb4a3713ad222d6"}
                            ;; this needs to be commented out sometimes because it overrides an aws transient
                            ;; dep for vilhelmina that fucks everything up
                            ;;org.clojure/tools.deps.alpha {:mvn/version "0.12.1030"}
-                           vlaaad/reveal                            {:mvn/version "1.3.209"}
+                           vlaaad/reveal                            {:mvn/version "1.3.250"}
                            nrepl/nrepl                              {:mvn/version "0.8.3"}
                            cider/cider-nrepl                        {:mvn/version "0.25.9"}}
               :jvm-opts   ["-Xmx3g" "-Xss300m" "-XX:-OmitStackTraceInFastThrow"
                            ;; these three are for jvm profiling
                            "-Djdk.attach.allowAttachSelf" "-XX:+UnlockDiagnosticVMOptions" "-XX:+DebugNonSafepoints"]
 			  ;; I kind of think that cider-middleware has to be last? bc some weird shit with an invisible cache was happening
-              :main-opts  ["-m" "nrepl.cmdline" "--middleware" "[vlaaad.reveal.nrepl/middleware,cider.nrepl/cider-middleware]" "--interactive" "--color"]
+              ;; removed vlaaad.reveal.nrepl/middleware bc I can just open it later
+              :main-opts  ["-m" "nrepl.cmdline" "--middleware" "[cider.nrepl/cider-middleware]" "--interactive" "--color"]
               :main-opts1 ["-m" "nrepl.cmdline" "--middleware" "[cider.nrepl/cider-middleware]" "--interactive" "--color"]
               }
              :local-dev-services

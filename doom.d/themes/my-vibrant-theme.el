@@ -29,13 +29,12 @@ determine the exact padding."
   :type '(choice integer boolean))
 
 
-;;
 (def-doom-theme my-vibrant
   "A dark theme based off of doom-one with more vibrant colors."
 
   ;; name        gui       256       16
-  ((bg         '("#322222" nil       nil)) ;; current line hightlighted & dired
-   (bg-alt     '("#231515" nil       nil)) ;; true background color
+  ((bg         '("grey7"   "grey7"  nil)) ;;
+   (bg-alt     '("grey15"  "grey15"  nil)) ;; current line hightlighted & dired
    (base0      '("#1c1f24" "#101010" "black"        ))
    (base1      '("#1c1f24" "#1e1e1e" "brightblack"  ))
    (base2      '("#21272d" "#21212d" "brightblack"  ))
@@ -45,13 +44,15 @@ determine the exact padding."
    (base6      '("#757B80" "#7b7b7b" "brightblack"  ))
    (base7      '("#9ca0a4" "#979797" "brightblack"  ))
    (base8      '("#DFDFDF" "#dfdfdf" "white"        ))
-   (fg         '("#bbc2cf" "#bfbfbf" ))
-   (fg-alt     '("#5D656B" "#5d5d5d" ))
+   (fg         '("grey70" "grey70" ))
+   (fg-alt     '("grey85" "grey85" ))
+   ;;(fg         '("grey70" "grey70" ))
+   ;;(fg-alt     '("grey85" "grey85" ))
 
    (grey       base4)
-   (red        '("#ff665c" "#ff6655" ))
+   (red        '("#ed5147" "#ff6655" ))
    (orange     '("#e69055" "#dd8844" ))
-   (green      '("#7bc275" "#99bb66" ))
+   (green      '("#3bd188" "#99bb66" ))
    (teal       '("#4db5bd" "#44b9b1" ))
    (yellow     '("#FCCE7B"           ))
    (blue       '("#51afef"           ))
@@ -77,7 +78,7 @@ determine the exact padding."
    (strings        green)
    (variables      teal)
    (numbers        orange)
-   (region         "#5d4451")
+   (region         base4)
    (error          red)
    (warning        yellow)
    (success        green)
@@ -86,8 +87,8 @@ determine the exact padding."
    (vc-deleted     red)
 
    ;; custom categories
-   (hidden     `(,(car bg) "black" "black"))
-   (hidden-alt `(,(car bg-alt) "black" "black"))
+   (hidden     bg)
+   (hidden-alt bg-alt)
    (-modeline-pad 1)
 
    ;; File-name
@@ -103,17 +104,12 @@ determine the exact padding."
    ;; (doom-modeline-panel :background (doom-darken green 0.2) :foreground fg)
 
 
-   (modeline-fg     "#dbc2cf")
-   (modeline-fg-alt (doom-blend blue grey (if doom-vibrant-brighter-modeline 0.4 0.08)))
+   (modeline-fg     fg-alt)
+   (modeline-fg-alt (doom-blend blue grey 0.2))
 
-   (modeline-bg
-    (if doom-vibrant-brighter-modeline
-        `("#383f58" ,@(cdr base1))
-      `(,(car bg-alt) ,@(cdr base0))))
-   (modeline-bg-l
-    (if doom-vibrant-brighter-modeline
-        modeline-bg
-      `(,(doom-darken (car bg) 0.15) ,@(cdr base1))))
+   (modeline-bg bg-alt)
+
+   (modeline-bg-l modeline-bg)
    (modeline-bg-inactive   (doom-darken bg 0.25))
    (modeline-bg-inactive-l `(,(doom-darken (car bg-alt) 0.2) ,@(cdr base0))))
 
@@ -126,7 +122,7 @@ determine the exact padding."
    (highlight-quoted-symbol :foreground (doom-darken yellow 0.15))
 
    ;;;;;;;; Editor ;;;;;;;;
-   (cursor :background "white")
+   (cursor :background fg-alt)
    (hl-line :background bg-alt)
 
    ;;;;;;;; Brackets ;;;;;;;;
@@ -165,15 +161,20 @@ determine the exact padding."
 
    (mode-line
     :background modeline-bg :foreground modeline-fg
-    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,(doom-darken blue 0.6))))
+    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,(doom-darken blue 0.6)))
+    :height 0.9)
    (mode-line-inactive
     :background modeline-bg-inactive :foreground modeline-fg-alt
-    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,(doom-darken blue 0.7))))
+    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,(doom-darken blue 0.7)))
+    :height 0.9)
    (mode-line-emphasis
     :foreground (if doom-vibrant-brighter-modeline base8 highlight))
 
 
-   (whitespace-empty :background base2)
+   (whitespace-empty :background bg)
+
+   (whitespace-indentation :inherit 'default)
+   (whitespace-big-indent :inherit 'default)
 
    ;; --- major-mode faces -------------------
    ;; css-mode / scss-mode
@@ -186,11 +187,38 @@ determine the exact padding."
 
    ;; org-mode
    (org-hide :foreground hidden)
-   (solaire-org-hide-face :foreground hidden-alt))
+   (solaire-org-hide-face :foreground hidden-alt)
+
+;   (hl-fill-column-face :background bg-alt :foreground fg-alt)
+   ;; sets the hover thing indirectly
+   (lsp-face-highlight-textual :background dark-blue :inherit 'bold)
+   ;; don't think these two do anything
+   (lsp-ui-peek-highlight :foreground yellow :inherit 'bold)
+
+   ;; various doom things are inherited from these.
+   ;(diff-refine-added :inherit 'diff-added :background (doom-darken green 0.5))
+   (magit-diff-added-highlight :inherit 'diff-added :background (doom-darken green 0.7))
+   (magit-diff-added :inherit 'diff-added :background (doom-darken green 0.7))
+   (smerge-lower :inherit 'diff-added)
+   ;; (magit-diff-base :background "darkgreen")
+
+
+   ;(default ((t (:background "black"))))
+   ;(default :background bg)
+   )
 
 
   ;; --- extra variables --------------------
+  ;;
   ;; ()
+   ;; taken from
+   ;;;; lsp-mode and lsp-ui-mode
+   ;; (lsp-ui-peek-highlight :foreground yellow)
+   ;; (lsp-ui-sideline-symbol-info :foreground (doom-blend comments bg 0.85)
+   ;;                              :background bg-alt)
+   ;;
+      ;;;; lsp-mode and lsp-ui-mode
+
   )
 
 ;;; doom-vibrant-theme.el ends here

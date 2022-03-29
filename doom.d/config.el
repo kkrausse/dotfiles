@@ -15,8 +15,8 @@
 (org-babel-load-file "~/.doom.d/orgconfig.org")
 
 ;; idk wtf this does
-(dolist (hook '(emacs-lisp-mode-hook ielm-mode-hook))
-  (add-hook hook #'elisp-def-mode))
+;; (dolist (hook '(emacs-lisp-mode-hook ielm-mode-hook))
+;;   (add-hook hook #'elisp-def-mode))
 
 
 ;; util fns
@@ -33,9 +33,9 @@
   (interactive)
   (find-file (concat doom-private-dir "orgconfig.org")))
 
-(bound-and-true-p company-mode)
-(js-cleanup)
-(require 'smartparens-config)
+;; idk about this
+;; (bound-and-true-p company-mode)
+;; (require 'smartparens-config)
 
 ;;(evil-record-macro)
 ;; there's also evil-execute-macro

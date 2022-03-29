@@ -28,8 +28,18 @@
 (package! key-chord)
 (package! doom-themes)
 
+;; make it so terminal colors arent shit
+(package! solaire-mode :disable t)
+
+;; fixing this to use newer github stuff
+;; it seems they keep this up to date in melpa?
 (package! lsp-mode)
 (package! lsp-ui)
+
+;; override those in the clojure doom module
+;; pinning these have fucked me before
+(package! clojure-mode :pin nil)
+(package! cider :pin nil)
 
 (package! browse-at-remote
   :pin "cef26f2c063f2473af42d0e126c8613fe2f709e4"
@@ -42,13 +52,12 @@
            :repo "company-mode/company-mode"
            :branch "master"))
 
-(package! org-mode
-  :recipe (:host nil
-           :repo "https://code.orgmode.org/bzg/org-mode"))
+(package! org-mode)
 
 (package! org-roam
-  :recipe (:host nil
-           :repo "https://github.com/org-roam/org-roam"))
+  :recipe (:host github
+           :branch "master"
+           :repo "org-roam/org-roam"))
 
 (package! org-bullets)
 
