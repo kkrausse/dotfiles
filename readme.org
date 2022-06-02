@@ -1,0 +1,40 @@
+copy over zsh history
+
+emacs
+
+#+begin_src bash
+brew install emacs-plus@28 --with-native-comp
+#+end_src
+
+vim vinegar
+
+#+begin_src bash
+mkdir -p ~/.vim/pack/tpope/start/vim-vinegar/
+git clone https://github.com/tpope/vim-vinegar.git ~/.vim/pack/tpope/start/vim-vinegar/
+#+end_src
+
+I found this interesting in my `.zshrc.pre-oh-my-zsh`
+
+#+begin_src bash
+export PATH=$HOME/bin:$PATH
+export PATH=~/bin/just-v0.8.3-x86_64-apple-darwin:$PATH
+export JAVA_HOME=$(/usr/libexec/java_home)
+
+# bash completion stuff
+[[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]] && . "/usr/local/etc/profile.d/bash_completion.sh"
+
+# kubectl use-context shortcut with autocomplete
+kuc() {
+  if [ $# -ne 1 ]; then
+    echo "Usage: kuc CONTEXT"
+  else
+    kubectl config use-context $1
+  fi
+}
+_kuc() {
+    local cur=${COMP_WORDS[COMP_CWORD]}
+    COMPREPLY=( $(compgen -W "data-services.us-west-2a pro-apps.us-west-2a pro-apps.us-west-2b pro-apps.eu-central-1b pro-apps.eu-central-1c pro-apps.ap-southeast-1b.prod.pages pro-apps.ap-southeast-1c.prod.pages consumer-apps.us-west-2a consumer-apps.us-west-2b" -- $cur) )
+}
+
+complete -F _kuc kuc
+#+end_src
