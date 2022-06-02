@@ -38,8 +38,9 @@
 
 ;; override those in the clojure doom module
 ;; pinning these have fucked me before
-(package! clojure-mode :pin nil)
-(package! cider :pin nil)
+;;  switch add `:pin nil' if ya want
+(package! clojure-mode)
+(package! cider)
 
 (package! browse-at-remote
   :pin "cef26f2c063f2473af42d0e126c8613fe2f709e4"

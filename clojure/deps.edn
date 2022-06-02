@@ -29,10 +29,15 @@
                            ;; this needs to be commented out sometimes because it overrides an aws transient
                            ;; dep for vilhelmina that fucks everything up
                            ;;org.clojure/tools.deps.alpha {:mvn/version "0.12.1030"}
-                           vlaaad/reveal                            {:mvn/version "1.3.250"}
+                           vlaaad/reveal                            {:mvn/version "1.3.273"}
                            nrepl/nrepl                              {:mvn/version "0.8.3"}
                            cider/cider-nrepl                        {:mvn/version "0.25.9"}}
               :jvm-opts   ["-Xmx3g" "-Xss300m" "-XX:-OmitStackTraceInFastThrow"
+                           ;; testing keystore
+                           ;; "-Djavax.net.ssl.keyStore=/Users/kkrausse/Documents/ekata/services/network-signals/docker/certs/redislabs_user.p12"
+                           ;; "-Djavax.net.ssl.keyStoreType=PKCS12"
+                           ;; "-Djavax.net.ssl.keyStorePassword=bimjean"
+                           ;; "-Djavax.net.debug=ssl"
                            ;; these three are for jvm profiling
                            "-Djdk.attach.allowAttachSelf" "-XX:+UnlockDiagnosticVMOptions" "-XX:+DebugNonSafepoints"]
 			  ;; I kind of think that cider-middleware has to be last? bc some weird shit with an invisible cache was happening

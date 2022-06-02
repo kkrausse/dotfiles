@@ -203,6 +203,15 @@ supposed to kind of recreate my vimrc
 
 ** Random Config
 #+begin_src elisp
+(add-hook! projectile-mode
+  (add-to-list 'projectile-project-search-path '("~/Documents/ekata/" . 2))
+  (add-to-list 'projectile-project-search-path '("~/Documents/me/" . 2)))
+
+(setq projectile-switch-project-action #'projectile-dired)
+
+;; makes the above thing actially work
+(setq counsel-projectile-switch-project-action (lambda (project)
+                                                 (dired (projectile-project-root project))))
 
 ;; delete dired buffers when switching
 (define-advice dired-find-file (:around (orig-fun &rest _) dired-find-file-advice)
@@ -329,8 +338,10 @@ eval thing
 (map! :mode org-mode
       :localleader
       "'"  #'org-edit-special
-      "gb" #'org-mark-ring-goto)
+      "g b" #'org-mark-ring-goto)
 #+end_src
+
+#+RESULTS:
 
 idk what this is, came with doom
 
@@ -375,15 +386,15 @@ Make TAB act as if it were issued in a buffer of the language's major mode.
 ;; org roam to display in same window
 (customize-set-variable
  'display-buffer-alist
- (cons '("\\*org-roam\\*" (display-buffer-same-window))
+ (append '(("\\*org-roam\\*" (display-buffer-same-window))
+           ("\\*lsp-help\\*" (display-buffer-same-window)))
        display-buffer-alist))
 
 ;; define some keys everywhere
-(general-define-key
- :states '(normal visual)
- :keymaps 'global
- "C-c n f" 'org-roam-node-find
- "C-c n d" 'org-roam-dailies-find-directory)
+(map!
+ (:prefix ("C-c n" . "Org Roam")
+  "f" 'org-roam-node-find
+  "d" 'org-roam-dailies-find-directory))
 
 (use-package! org-roam
   :commands org-roam-node-find
