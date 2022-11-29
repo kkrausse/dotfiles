@@ -1,4 +1,14 @@
 ;; -*- lexical-binding: t; -*-
+(setq multi-term-program "/bin/zsh")
+(setq-default explicit-shell-file-name "/bin/zsh")
+
+
+(use-package! exec-path-from-shell
+  :config
+(dolist (var '("JAVA_HOME"))
+  (add-to-list 'exec-path-from-shell-variables var)))
+
+(exec-path-from-shell-initialize)
 
 (defmacro kev-fn (arglist &rest body)
   (let ((fargsym (gensym "arg")))
@@ -149,10 +159,15 @@
 
 ;; vinegar
 (define-key evil-normal-state-map (kbd "-") 'dired-jump)
+
+;; for evil-escape package
+;; so much better than key chord!!
+(setq-default evil-escape-key-sequence "jj")
+(setq-default evil-escape-delay 0.2)
 ;; requires key-chord package
-(key-chord-define evil-insert-state-map "jj" 'evil-normal-state)
-(key-chord-mode 1)
-(setq key-chord-one-key-delay 0.4)
+;; (key-chord-define evil-insert-state-map "jj" 'evil-normal-state)
+;; (key-chord-mode 1)
+;; (setq key-chord-one-key-delay 0.4)
 
 (add-hook! projectile-mode
   (add-to-list 'projectile-project-search-path '("~/Documents/ekata/" . 2))
@@ -169,6 +184,11 @@
   (let ((prev-buf (current-buffer)))
     (funcall-interactively orig-fun)
     (when (and (eq 'dired-mode (buffer-local-value 'major-mode prev-buf))
+               ;; make sure it's not currently displayed
+               (not (seq-find (lambda (w)
+                                (eq prev-buf
+                                    (window-buffer w)))
+                              (window-list)))
                (not (eq prev-buf (current-buffer))))
       (kill-buffer prev-buf))))
 
@@ -176,8 +196,15 @@
   (let ((prev-buf (current-buffer)))
     (apply #'funcall-interactively orig-fun args)
     (when (and (eq 'dired-mode (buffer-local-value 'major-mode prev-buf))
+               ;; make sure it's not currently displayed
+               (not (seq-find (lambda (w)
+                                (eq prev-buf
+                                    (window-buffer w)))
+                              (window-list)))
                (not (eq prev-buf (current-buffer))))
       (kill-buffer prev-buf))))
+
+
 
 
 ;; github yank line link
@@ -272,7 +299,8 @@
 
 
 
-(setq org-roam-v2-ack t)
+(setq org-roam-v2-ack t
+      org-roam-directory "~/Documents/worknotes/org-roam")
 
 ;; org roam to display in same window
 (customize-set-variable
@@ -289,15 +317,17 @@
 
 (use-package! org-roam
   :commands org-roam-node-find
-  :custom
-  (org-roam-directory "~/Documents/worknotes/org-roam")
   :bind (:map org-roam-mode-map ;; this isn't a thing now
          (("C-c n l" . org-roam)
-          ("C-c n g" . org-roam-graph))
+          ("C-c n g" . org-roam-graph)
+          ("C-c n r" . org-roam-buffer-refresh))
          :map org-mode-map
          (("C-c n i" . org-roam-node-insert)
           ("C-c n c" . org-id-get-create)
           ("C-c n r" . org-roam-buffer-toggle)
+          ("C-c n s" . org-roam-db-sync)
+          ("C-c n a" . org-roam-alias-add)
+          ; already implemented above globally
           ;("C-c n f" . org-roam-node-find)
           ;("C-c n d" . org-roam-dailies-find-directory)
           ))
@@ -306,8 +336,7 @@
   ;; If you're using a vertical completion framework, you might want a more informative completion interface
   ;(setq org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
 
-  (org-roam-db-autosync-mode)
-  )
+  (org-roam-db-autosync-mode 1))
 
 (map! :mode emacs-lisp-mode
       :localleader
@@ -316,6 +345,22 @@
 
 
 
+(map! :mode ruby-mode
+      :localleader
+      :prefix ("g". "goto")
+      "g" #'robe-jump
+      :prefix ("e" . "eval..")
+      "b" #'ruby-send-buffer
+      "d" #'ruby-send-definition
+      "f" #'ruby-send-block
+      "e" #'ruby-send-last-stmt
+      "r" #'ruby-send-region)
+
+(remove-hook 'robe-mode-hook 'ac-robe-setup)
+
+(eval-after-load 'company
+  '(push 'company-robe company-backends))
+
 (add-hook! typescript-mode
            (lsp)
            (lsp-mode 1))
@@ -323,13 +368,20 @@
 (add-hook! js2-mode
            (lsp)
            (lsp-mode 1))
+
 (map! :mode js2-mode
       :localleader
-      "gg" 'js2-jump-to-definition
-      "gb" #'pop-tag-mark)
+      (:prefix ("g" . "goto...")
+      "g" 'js2-jump-to-definition
+      "b" #'pop-tag-mark))
+
+(map! :mode skewer
+      (:prefix (",e" . "skewer eval")
+       "d" 'skewer-eval-defun))
 
 (setq kevin-clojure-playbook
-      '("((requiring-resolve 'vlaaad.reveal/inspect) *1)"
+      '("((requiring-resolve 'dev/reset))"
+        "((requiring-resolve 'vlaaad.reveal/inspect) *1)"
         "(doseq [_ (range 20)] (prn (tap> nil)))"
         "((requiring-resolve 'vlaaad.reveal/tap-log) :close-difficulty :easy)"
         "((requiring-resolve 'pjstadig.humane-test-output/activate!))"
@@ -350,6 +402,19 @@
                             (cider-defun-at-point 'bounds)
                             (cider--nrepl-pr-request-map))))
 
+
+
+(defun kev-format-form (beg end)
+  (interactive (if (use-region-p)
+                   (list (region-beginning) (region-end))
+                 (save-excursion
+                   (let ((end (progn (end-of-defun)
+                                     (point))))
+                     (clojure-backward-logical-sexp)
+                     (list (point) end)))))
+      (save-excursion
+        (clojure-align beg end)
+        (lsp-format-region beg end)))
 
 (map! :mode clojure-mode
       :localleader
@@ -376,7 +441,8 @@
                                      nil
                                      (cider-defun-at-point 'bounds)
                                      (cider--nrepl-pr-request-map)))
-      "en" #'cider-eval-ns-form)
+      "en" #'cider-eval-ns-form
+      "="  #'kev-format-form)
 
  (defun cider-jack-in-babashka ()
   "Start an babashka nREPL server for the current project and connect to it."
@@ -395,8 +461,9 @@
        process-filter)))
 
 ;; develop on clojure-lsp
-;; ~/Documents/me/misc/clojure-lsp/
-(setq lsp-clojure-custom-server-command '("~/Documents/me/misc/clojure-lsp/clojure-lsp"))
+;; "~/Documents/me/misc/clojure-lsp/clojure-lsp"
+;; else just "clojure-lsp"
+(setq lsp-clojure-custom-server-command nil)
 
 (defun lsp-clojure-nrepl-connect ()
   "Connect to the running nrepl debug server of clojure-lsp."
@@ -436,7 +503,7 @@
         ;; focus help window when it shows up
         help-window-select t
         ;; disable sideline thing
-;        lsp-clojure-custom-server-command '("bash" "-c" "./clojure-lsp") ; to locally test clojure-lsp
+        lsp-clojure-custom-server-command '("zsh" "-c" "clojure-lsp") ; to locally test clojure-lsp
         lsp-ui-sideline-enable nil
         company-minimum-prefix-length 1
         lsp-file-watch-threshold 10000
@@ -489,6 +556,7 @@
     (do-template :form)
     (macrolet '(1 ((:defn)) nil))))
 
+    ;; makes so aggressive indent won't go until you exit insert mode
 (define-advice aggressive-indent--indent-if-changed (:around (orig-fun buffer) aggressive-indent-advice)
   (when (not (with-current-buffer buffer
                (evil-insert-state-p)))
@@ -497,7 +565,8 @@
 ;;(setq cider-comment-prefix "\n;; => ")
 (setq kev-clojure-cli-param-hist '("-M:test:dev:local-dev"
                                    "-M:cljs"
-                                   "-M:local-dev:cljs:server # clj(s) projects "
+                                   "-X:local-dev:cljs"
+                                   "-M:local-dev:server:cljs # clj(s) projects "
                                    "-A:test:dev:local-dev -m nrepl.cmdline --middleware '[cider.nrepl/cider-middleware]' --interactive --color # no reveal for java8"
                                    ))
 
@@ -510,6 +579,18 @@
   :config
   (setq cider-comment-prefix "\n;; => "
         cider-repl-buffer-size-limit 100)
+
+
+        ;; fix shadow to not auto-evaluate forms!
+        ;; well, can adjust this. for now, keeping
+        ;; BUT maybe it would be a good idea to actually
+        ;; look at shadow.cljs.devtools.api/nrepl-select
+        ;; (setcar
+        ;;  (cdr (seq-find (lambda (e)
+        ;;                 (eq 'shadow (car e)))
+        ;;                 cider-cljs-repl-types))
+;;         'cider-shadow-select-cljs-init-form)
+
 
   ;; this is to fix the cider jack in to by my own thing because they changed some
   ;; version and got rid of =cider-clojure-cli-parameters=
@@ -544,7 +625,8 @@
 (define-advice nrepl-start-server-process (:around (orig-fun directory cmd on-port-callback) nrepl-start-server-process-advice)
   ;; insert prefix because sdkman doesn't insert the environment in emacs automatically
   ;; idk how to set it for the current emacs shell. may not be possible
-  (let ((cmd-prefix "source \"$HOME/.sdkman/bin/sdkman-init.sh\" && { echo \"no\n\" | sdk env || echo 'no .sdkman?' } && sdk c java && "))
+  ;; was: "source \"$HOME/.sdkman/bin/sdkman-init.sh\" && { echo \"no\n\" | sdk env || echo 'no .sdkman?' } && sdk c java && "
+  (let ((cmd-prefix "source \"$HOME/.sdkman/bin/sdkman-init.sh\" && echo \"no\\n\" | sdk c java && "))
     (funcall orig-fun directory (concat cmd-prefix cmd) on-port-callback)))
 
 (defconst cue-keywords

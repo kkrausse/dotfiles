@@ -2,6 +2,13 @@ copy over zsh history
 
 emacs
 
+
+#+begin_src bash
+ln -s $(pwd)/doom.d/ ~/.doom.d
+ln -s $(pwd)/zshrc ~/.zshrc
+ln -s $(pwd)/lsp ~/.lsp
+#+end_src
+
 #+begin_src bash
 brew install emacs-plus@28 --with-native-comp
 #+end_src
