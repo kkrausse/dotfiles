@@ -1,10 +1,11 @@
+# might be cool to use this at some point
 function c() {
 	echo "${fg[green]}  ~/$(realpath --relative-to=$HOME '.')"
 	echo "${fg[magenta]}  $(kuc) "
 	echo "  $(git_prompt_info) ${reset_color}"
 }
 
-PROMPT='%{$fg[green]%}$ %{$reset_color%'
+PROMPT='%{$fg[green]%}$ %{$reset_color%}'
 
 ZSH_THEME_GIT_PROMPT_PREFIX="${fg[red]}"
 ZSH_THEME_GIT_PROMPT_SUFFIX=""
@@ -72,8 +73,23 @@ alias sol=solana
 # required to compile some emacs stuff
 export PATH="/usr/local/opt/texinfo/bin:$PATH"
 
-# emacs 27 with native comp!
-export PATH="/usr/local/opt/emacs-plus@27/bin:$PATH"
-
 # emacs no window
 alias enw="emacs -nw"
+
+# >>> conda initialize >>>
+# !! Contents within this block are managed by 'conda init' !!
+__conda_setup="$('/Users/kevinkrausse/mambaforge/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__conda_setup"
+else
+    if [ -f "/Users/kevinkrausse/mambaforge/etc/profile.d/conda.sh" ]; then
+        . "/Users/kevinkrausse/mambaforge/etc/profile.d/conda.sh"
+    else
+        export PATH="/Users/kevinkrausse/mambaforge/bin:$PATH"
+    fi
+fi
+unset __conda_setup
+# <<< conda initialize <<<
+
+export PATH="/usr/local/opt/ruby/bin:$PATH"
+export PATH="/usr/local/lib/ruby/gems/3.0.0/bin:$PATH"

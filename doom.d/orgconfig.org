@@ -5,6 +5,16 @@ this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_chann
 * emacs setup / utils
 #+begin_src elisp
 ;; -*- lexical-binding: t; -*-
+(setq multi-term-program "/bin/zsh")
+(setq-default explicit-shell-file-name "/bin/zsh")
+
+
+(use-package! exec-path-from-shell
+  :config
+(dolist (var '("JAVA_HOME"))
+  (add-to-list 'exec-path-from-shell-variables var)))
+
+(exec-path-from-shell-initialize)
 #+end_src
 
 #+begin_src elisp
@@ -192,14 +202,19 @@ supposed to kind of recreate my vimrc
 
 ;; vinegar
 (define-key evil-normal-state-map (kbd "-") 'dired-jump)
+
+;; for evil-escape package
+;; so much better than key chord!!
+(setq-default evil-escape-key-sequence "jj")
+(setq-default evil-escape-delay 0.2)
 ;; requires key-chord package
-(key-chord-define evil-insert-state-map "jj" 'evil-normal-state)
-(key-chord-mode 1)
-(setq key-chord-one-key-delay 0.4)
+;; (key-chord-define evil-insert-state-map "jj" 'evil-normal-state)
+;; (key-chord-mode 1)
+;; (setq key-chord-one-key-delay 0.4)
 #+end_src
 
 #+RESULTS:
-: 0.4
+: 0.2
 
 ** Random Config
 #+begin_src elisp
@@ -218,6 +233,11 @@ supposed to kind of recreate my vimrc
   (let ((prev-buf (current-buffer)))
     (funcall-interactively orig-fun)
     (when (and (eq 'dired-mode (buffer-local-value 'major-mode prev-buf))
+               ;; make sure it's not currently displayed
+               (not (seq-find (lambda (w)
+                                (eq prev-buf
+                                    (window-buffer w)))
+                              (window-list)))
                (not (eq prev-buf (current-buffer))))
       (kill-buffer prev-buf))))
 
@@ -225,8 +245,15 @@ supposed to kind of recreate my vimrc
   (let ((prev-buf (current-buffer)))
     (apply #'funcall-interactively orig-fun args)
     (when (and (eq 'dired-mode (buffer-local-value 'major-mode prev-buf))
+               ;; make sure it's not currently displayed
+               (not (seq-find (lambda (w)
+                                (eq prev-buf
+                                    (window-buffer w)))
+                              (window-list)))
                (not (eq prev-buf (current-buffer))))
       (kill-buffer prev-buf))))
+
+
 
 
 ;; github yank line link
@@ -381,7 +408,8 @@ Make TAB act as if it were issued in a buffer of the language's major mode.
 
 ** org-roam
 #+begin_src elisp
-(setq org-roam-v2-ack t)
+(setq org-roam-v2-ack t
+      org-roam-directory "~/Documents/worknotes/org-roam")
 
 ;; org roam to display in same window
 (customize-set-variable
@@ -398,15 +426,17 @@ Make TAB act as if it were issued in a buffer of the language's major mode.
 
 (use-package! org-roam
   :commands org-roam-node-find
-  :custom
-  (org-roam-directory "~/Documents/worknotes/org-roam")
   :bind (:map org-roam-mode-map ;; this isn't a thing now
          (("C-c n l" . org-roam)
-          ("C-c n g" . org-roam-graph))
+          ("C-c n g" . org-roam-graph)
+          ("C-c n r" . org-roam-buffer-refresh))
          :map org-mode-map
          (("C-c n i" . org-roam-node-insert)
           ("C-c n c" . org-id-get-create)
           ("C-c n r" . org-roam-buffer-toggle)
+          ("C-c n s" . org-roam-db-sync)
+          ("C-c n a" . org-roam-alias-add)
+          ; already implemented above globally
           ;("C-c n f" . org-roam-node-find)
           ;("C-c n d" . org-roam-dailies-find-directory)
           ))
@@ -415,9 +445,11 @@ Make TAB act as if it were issued in a buffer of the language's major mode.
   ;; If you're using a vertical completion framework, you might want a more informative completion interface
   ;(setq org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
 
-  (org-roam-db-autosync-mode)
-  )
+  (org-roam-db-autosync-mode 1))
 #+end_src
+
+#+RESULTS:
+: #s(hash-table size 65 test eql rehash-size 1.5 rehash-threshold 0.8125 data (:use-package (25305 49113 294956 0) :init (25305 49113 294719 0) :init-secs (0 0 183954 0) :use-package-secs (0 0 184209 0) :config (25305 49113 294704 0) :config-secs (0 0 183912 0)))
 
 * Language-Specific
 ** Lisp
@@ -435,6 +467,27 @@ disable doc checkers
 
 #+begin_src elisp
 #+end_src
+** Ruby
+#+begin_src elisp
+(map! :mode ruby-mode
+      :localleader
+      :prefix ("g". "goto")
+      "g" #'robe-jump
+      :prefix ("e" . "eval..")
+      "b" #'ruby-send-buffer
+      "d" #'ruby-send-definition
+      "f" #'ruby-send-block
+      "e" #'ruby-send-last-stmt
+      "r" #'ruby-send-region)
+
+(remove-hook 'robe-mode-hook 'ac-robe-setup)
+
+(eval-after-load 'company
+  '(push 'company-robe company-backends))
+#+end_src
+
+#+RESULTS:
+
 ** JavaScript n TypeScript
 
 #+begin_src elisp
@@ -451,13 +504,27 @@ update: should really just use emacs' lsp-mode for this
 (add-hook! js2-mode
            (lsp)
            (lsp-mode 1))
+
 (map! :mode js2-mode
       :localleader
-      "gg" 'js2-jump-to-definition
-      "gb" #'pop-tag-mark)
+      (:prefix ("g" . "goto...")
+      "g" 'js2-jump-to-definition
+      "b" #'pop-tag-mark))
+
+#+end_src
+
+for skewer
+
+#+begin_src elisp
+
+(map! :mode skewer
+      (:prefix (",e" . "skewer eval")
+       "d" 'skewer-eval-defun))
+
 #+end_src
 
 #+RESULTS:
+
 
 ** Clojure
 
@@ -466,7 +533,8 @@ nice keybindings
 #+begin_src elisp
 
 (setq kevin-clojure-playbook
-      '("((requiring-resolve 'vlaaad.reveal/inspect) *1)"
+      '("((requiring-resolve 'dev/reset))"
+        "((requiring-resolve 'vlaaad.reveal/inspect) *1)"
         "(doseq [_ (range 20)] (prn (tap> nil)))"
         "((requiring-resolve 'vlaaad.reveal/tap-log) :close-difficulty :easy)"
         "((requiring-resolve 'pjstadig.humane-test-output/activate!))"
@@ -487,6 +555,19 @@ nice keybindings
                             (cider-defun-at-point 'bounds)
                             (cider--nrepl-pr-request-map))))
 
+
+
+(defun kev-format-form (beg end)
+  (interactive (if (use-region-p)
+                   (list (region-beginning) (region-end))
+                 (save-excursion
+                   (let ((end (progn (end-of-defun)
+                                     (point))))
+                     (clojure-backward-logical-sexp)
+                     (list (point) end)))))
+      (save-excursion
+        (clojure-align beg end)
+        (lsp-format-region beg end)))
 
 (map! :mode clojure-mode
       :localleader
@@ -513,7 +594,8 @@ nice keybindings
                                      nil
                                      (cider-defun-at-point 'bounds)
                                      (cider--nrepl-pr-request-map)))
-      "en" #'cider-eval-ns-form)
+      "en" #'cider-eval-ns-form
+      "="  #'kev-format-form)
 
  (defun cider-jack-in-babashka ()
   "Start an babashka nREPL server for the current project and connect to it."
@@ -539,8 +621,9 @@ lsp utils
 
 #+begin_src elisp
 ;; develop on clojure-lsp
-;; ~/Documents/me/misc/clojure-lsp/
-(setq lsp-clojure-custom-server-command '("~/Documents/me/misc/clojure-lsp/clojure-lsp"))
+;; "~/Documents/me/misc/clojure-lsp/clojure-lsp"
+;; else just "clojure-lsp"
+(setq lsp-clojure-custom-server-command nil)
 
 (defun lsp-clojure-nrepl-connect ()
   "Connect to the running nrepl debug server of clojure-lsp."
@@ -587,7 +670,7 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
         ;; focus help window when it shows up
         help-window-select t
         ;; disable sideline thing
-;        lsp-clojure-custom-server-command '("bash" "-c" "./clojure-lsp") ; to locally test clojure-lsp
+        lsp-clojure-custom-server-command '("zsh" "-c" "clojure-lsp") ; to locally test clojure-lsp
         lsp-ui-sideline-enable nil
         company-minimum-prefix-length 1
         lsp-file-watch-threshold 10000
@@ -618,13 +701,7 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
                clojurescript-mode
                clojurex-mode))
     (add-to-list 'lsp-language-id-configuration `(,m . "clojure"))))
-#+end_src
 
-#+RESULTS:
-: #s(hash-table size 65 test eql rehash-size 1.5 rehash-threshold 0.8125 data (:use-package (25128 60570 672491 0) :init (25128 60570 672483 0) :init-secs (0 0 119 0) :use-package-secs (0 0 136 0) :config (25128 60570 672472 0) :config-secs (0 0 99 0)))
-
-
-#+begin_src elisp
 (add-hook! clojure-mode
   ;;(aggressive-indent-mode) this shit so slow :(
   (hs-minor-mode)
@@ -646,17 +723,15 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
     (do-template :form)
     (macrolet '(1 ((:defn)) nil))))
 
-#+end_src
-
-
-makes so aggressive indent won't go until you exit insert mode
-
-#+begin_src elisp
+    ;; makes so aggressive indent won't go until you exit insert mode
 (define-advice aggressive-indent--indent-if-changed (:around (orig-fun buffer) aggressive-indent-advice)
   (when (not (with-current-buffer buffer
                (evil-insert-state-p)))
     (funcall orig-fun buffer)))
 #+end_src
+
+#+RESULTS:
+: aggressive-indent--indent-if-changed@aggressive-indent-advice
 
 cider configs
 
@@ -664,7 +739,8 @@ cider configs
 ;;(setq cider-comment-prefix "\n;; => ")
 (setq kev-clojure-cli-param-hist '("-M:test:dev:local-dev"
                                    "-M:cljs"
-                                   "-M:local-dev:cljs:server # clj(s) projects "
+                                   "-X:local-dev:cljs"
+                                   "-M:local-dev:server:cljs # clj(s) projects "
                                    "-A:test:dev:local-dev -m nrepl.cmdline --middleware '[cider.nrepl/cider-middleware]' --interactive --color # no reveal for java8"
                                    ))
 
@@ -677,6 +753,18 @@ cider configs
   :config
   (setq cider-comment-prefix "\n;; => "
         cider-repl-buffer-size-limit 100)
+
+
+        ;; fix shadow to not auto-evaluate forms!
+        ;; well, can adjust this. for now, keeping
+        ;; BUT maybe it would be a good idea to actually
+        ;; look at shadow.cljs.devtools.api/nrepl-select
+        ;; (setcar
+        ;;  (cdr (seq-find (lambda (e)
+        ;;                 (eq 'shadow (car e)))
+        ;;                 cider-cljs-repl-types))
+;;         'cider-shadow-select-cljs-init-form)
+
 
   ;; this is to fix the cider jack in to by my own thing because they changed some
   ;; version and got rid of =cider-clojure-cli-parameters=
@@ -711,9 +799,14 @@ cider configs
 (define-advice nrepl-start-server-process (:around (orig-fun directory cmd on-port-callback) nrepl-start-server-process-advice)
   ;; insert prefix because sdkman doesn't insert the environment in emacs automatically
   ;; idk how to set it for the current emacs shell. may not be possible
-  (let ((cmd-prefix "source \"$HOME/.sdkman/bin/sdkman-init.sh\" && { echo \"no\n\" | sdk env || echo 'no .sdkman?' } && sdk c java && "))
+  ;; was: "source \"$HOME/.sdkman/bin/sdkman-init.sh\" && { echo \"no\n\" | sdk env || echo 'no .sdkman?' } && sdk c java && "
+  (let ((cmd-prefix "source \"$HOME/.sdkman/bin/sdkman-init.sh\" && echo \"no\\n\" | sdk c java && "))
     (funcall orig-fun directory (concat cmd-prefix cmd) on-port-callback)))
 #+end_src
+
+#+RESULTS:
+: nrepl-start-server-process@nrepl-start-server-process-advice
+
 
 ** cue
 #+begin_src emacs-lisp

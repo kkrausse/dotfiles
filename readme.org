@@ -9,13 +9,20 @@ fudgeups:
 - cat dotfiles/zshrc >> ~/.zshrc
 - install doom!
 
-emacs
-
-see https://github.com/d12frosted/homebrew-emacs-plus
+emacs see https://github.com/d12frosted/homebrew-emacs-plus
 
 #+begin_src bash
 brew tap d12frosted/emacs-plus
 brew install emacs-plus@28 --with-native-comp
+#+end_src
+
+symlinks (run from project root)
+
+#+begin_src bash
+ln -s $(pwd)/doom.d/ ~/.doom.d
+# after installing oh my zsh,
+cat zshrc >> ~/.zshrc
+ln -s $(pwd)/lsp ~/.lsp
 #+end_src
 
 vim vinegar

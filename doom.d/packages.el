@@ -27,6 +27,8 @@
 (package! dired-du)
 (package! key-chord)
 (package! doom-themes)
+;; for "jj" chord binding to escape
+(package! evil-escape)
 
 ;; make it so terminal colors arent shit
 (package! solaire-mode :disable t)
@@ -41,6 +43,11 @@
 ;;  switch add `:pin nil' if ya want
 (package! clojure-mode)
 (package! cider)
+
+(package! exec-path-from-shell
+  :recipe (:host github
+           :repo "purcell/exec-path-from-shell"
+		   :branch "master"))
 
 (package! browse-at-remote
   :pin "cef26f2c063f2473af42d0e126c8613fe2f709e4"
@@ -57,8 +64,8 @@
 
 (package! org-roam
   :recipe (:host github
-           :branch "master"
-           :repo "org-roam/org-roam"))
+           :repo "org-roam/org-roam"
+		   :files (:defaults "extensions/*")))
 
 (package! org-bullets)
 
