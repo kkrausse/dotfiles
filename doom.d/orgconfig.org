@@ -409,7 +409,7 @@ Make TAB act as if it were issued in a buffer of the language's major mode.
 ** org-roam
 #+begin_src elisp
 (setq org-roam-v2-ack t
-      org-roam-directory "~/Documents/worknotes/org-roam")
+      org-roam-directory "~/Documents/repos/worknotes/org-roam")
 
 ;; org roam to display in same window
 (customize-set-variable
@@ -449,7 +449,7 @@ Make TAB act as if it were issued in a buffer of the language's major mode.
 #+end_src
 
 #+RESULTS:
-: #s(hash-table size 65 test eql rehash-size 1.5 rehash-threshold 0.8125 data (:use-package (25305 49113 294956 0) :init (25305 49113 294719 0) :init-secs (0 0 183954 0) :use-package-secs (0 0 184209 0) :config (25305 49113 294704 0) :config-secs (0 0 183912 0)))
+: #s(hash-table size 65 test eql rehash-size 1.5 rehash-threshold 0.8125 data (:use-package (25478 22530 426227 0) :init (25478 22530 426157 0) :init-secs (0 0 11 0) :use-package-secs (0 0 89 0)))
 
 * Language-Specific
 ** Lisp
@@ -852,11 +852,10 @@ cider configs
   - eval-previously-evaled-test
 - [ ] modify autoindent to be smarter! maybe use clj-kondo?
 - [ ] auto right align for maps and lets (like how aggressive indent works)
-- [ ] popup for cider errors instead of other window
+- [ ] popup (popwin?) for cider errors instead of other window
 - [ ] multiterm keybindings and alias it to just "term"
 - [ ] move buffer 1,2,3,4,5,6...
 - [ ] make symbols that cider doesn't recognise be a different color. e.g. async-clj/go-ctch
-- [ ] clojure errors go to popwin
 - [ ] investigate difference between clojure-layer and clojure-mode to bring back useful keybindings
   - might need to change clojure major mode's leader?
 - [ ] format buffer with smartparens (bc it does that somehow)
