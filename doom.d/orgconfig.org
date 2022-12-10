@@ -2,6 +2,24 @@
 
 this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_channel=thoughtbot][this video]] and the [[https://github.com/hrs/dotfiles/blob/main/emacs/dot-emacs.d/configuration.org][setup he uses]].
 
+* machine-specific
+#+begin_src elisp
+(add-hook! projectile-mode
+  (add-to-list 'projectile-project-search-path '("~/Documents/ekata/" . 2))
+  (add-to-list 'projectile-project-search-path '("~/Documents/me/" . 2)))
+
+
+(setq org-roam-directory "~/Documents/worknotes/org-roam")
+
+;; idk what this is, came with doom
+
+;; If you use `org' and don't want your org files in the default location below,
+;; change `org-directory'. It must be set before org loads!
+(setq org-directory "~/org/")
+
+;; c source directory so it doesn't prompt each time
+(setq find-function-C-source-directory "~/Documents/projects/etc/emacs/src")
+#+end_src
 * emacs setup / utils
 #+begin_src elisp
 ;; -*- lexical-binding: t; -*-
@@ -347,10 +365,6 @@ supposed to kind of recreate my vimrc
 
 ** Random Config
 #+begin_src elisp
-(add-hook! projectile-mode
-  (add-to-list 'projectile-project-search-path '("~/Documents/ekata/" . 2))
-  (add-to-list 'projectile-project-search-path '("~/Documents/me/" . 2)))
-
 (setq projectile-switch-project-action #'projectile-dired)
 
 ;; makes the above thing actially work
@@ -392,8 +406,6 @@ supposed to kind of recreate my vimrc
 (setq confirm-kill-emacs nil)
 ;; when exit insert mode exit
 (setq evil-move-cursor-back t)
-;; c source directory so it doesn't prompt each time
-(setq find-function-C-source-directory "~/Documents/me/emacs-build/emacs-ng-2/src")
 
 ;; flycheck has horrible perf.. maybe?
 (setq flycheck-check-syntax-automatically '(save idle-change))
@@ -499,13 +511,6 @@ eval thing
 
 #+RESULTS:
 
-idk what this is, came with doom
-
-#+begin_src elisp
-;; If you use `org' and don't want your org files in the default location below,
-;; change `org-directory'. It must be set before org loads!
-(setq org-directory "~/org/")
-#+end_src
 
 TODO archive
 
@@ -537,8 +542,7 @@ Make TAB act as if it were issued in a buffer of the language's major mode.
 
 ** org-roam
 #+begin_src elisp
-(setq org-roam-v2-ack t
-      org-roam-directory "~/Documents/worknotes/org-roam")
+(setq org-roam-v2-ack t)
 
 ;; org roam to display in same window
 (customize-set-variable
