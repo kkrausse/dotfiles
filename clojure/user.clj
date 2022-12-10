@@ -27,6 +27,7 @@
      (let [~linesym (line-seq reader#)]
        ~@body)))
 
+#_
 (tap> {:rx/command '(defaction ::intern-as-x [x]
                       #(intern 'user 'x x))})
 

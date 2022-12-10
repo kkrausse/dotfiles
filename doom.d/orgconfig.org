@@ -11,13 +11,11 @@ this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_chann
 
 (use-package! exec-path-from-shell
   :config
-(dolist (var '("JAVA_HOME"))
-  (add-to-list 'exec-path-from-shell-variables var)))
+  (dolist (var '("JAVA_HOME"))
+    (add-to-list 'exec-path-from-shell-variables var)))
 
+;; what is this?!
 (exec-path-from-shell-initialize)
-#+end_src
-
-#+begin_src elisp
 
 (defmacro kev-fn (arglist &rest body)
   (let ((fargsym (gensym "arg")))
@@ -25,6 +23,25 @@ this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_chann
        (cl-destructuring-bind ,arglist
            ,fargsym
          ,@body))))
+
+(defun kevindent (beg end)
+  "indents highlighted."
+  (interactive "r")
+  (kevin-paredit-mode 0)
+  (evil-normal-state 1)
+  (save-excursion
+    (goto-char beg)
+    (beginning-of-line)
+    (while (< (point) end)
+      (execute-kbd-macro (vector (string-to-char "i") ; insert
+                                 13 ; enter
+                                 )) ; this escape doesn't work
+      (evil-normal-state 1)
+      ;; up, delete line, down, beginning of line
+      (execute-kbd-macro "kddj0"))))
+
+;; just map everywhere
+(map! "C-c i" 'kevindent)
 
 ;; this is actually great http://clhs.lisp.se/Body/03_dd.htm
 ;; aslo the cl-defmacro definition has some of that info
@@ -39,6 +56,10 @@ this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_chann
                                :type type)))
           (hash-table-values straight--build-cache)))
 #+end_src
+
+#+RESULTS:
+: kev-list-packages
+
 * UI preferences
 ** General
 
@@ -264,7 +285,7 @@ supposed to kind of recreate my vimrc
 ;; when exit insert mode exit
 (setq evil-move-cursor-back t)
 ;; c source directory so it doesn't prompt each time
-(setq find-function-C-source-directory "~/Documents/me/emacs-build/emacs-ng-2/src")
+(setq find-function-C-source-directory "~/Documents/repos/etc/emacs/src")
 
 ;; flycheck has horrible perf.. maybe?
 (setq flycheck-check-syntax-automatically '(save idle-change))
@@ -532,7 +553,25 @@ nice keybindings
 
 #+begin_src elisp
 
-(setq kevin-clojure-playbook
+
+;; basically, idea is to get a git tag from the buffer,
+;; call an api to get a commit hash, then look at the magit integration for how to
+;; convert that into a link.
+;;
+;; Might just do the simple case for github so It'll work for clojure stuff
+(defun kev-gh-link ()
+  (interactive)
+  ;; e.g. "clojure-1.10.0.jar:clojure/core.clj"
+  (when-let* ((fname (buffer-name))
+              (splitted (s-split ".jar:" fname))
+              (tag  (car splitted))
+              (file (cadr splitted)))
+    (list tag file)))
+
+
+
+
+(defvar kevin-clojure-playbook
       '("((requiring-resolve 'dev/reset))"
         "((requiring-resolve 'vlaaad.reveal/inspect) *1)"
         "(doseq [_ (range 20)] (prn (tap> nil)))"
@@ -595,7 +634,8 @@ nice keybindings
                                      (cider-defun-at-point 'bounds)
                                      (cider--nrepl-pr-request-map)))
       "en" #'cider-eval-ns-form
-      "="  #'kev-format-form)
+      "="  #'kev-format-form
+      "ip" #'(lambda () (interactive) (insert "clojure.pprint/pprint")))
 
  (defun cider-jack-in-babashka ()
   "Start an babashka nREPL server for the current project and connect to it."
@@ -768,7 +808,7 @@ cider configs
 
   ;; this is to fix the cider jack in to by my own thing because they changed some
   ;; version and got rid of =cider-clojure-cli-parameters=
-  (setq cider-inject-dependencies-at-jack-in nil)
+  (setq cider-inject-dependencies-at-jack-in 't)
   (setq cider-jack-in-dependencies nil)
   (setq cider-jack-in-auto-inject-clojure nil)
   (define-advice cider-jack-in-params (:around (orig-fun project-type) jack-in-param-advice)
@@ -796,12 +836,23 @@ cider configs
   ;;                repls))
   (funcall orig-fun type ensure))
 
+;; cider window popup!
+;;
+;; use display-buffer-alist to fix what we do!
+;; cider-repl-pop-to-buffer-on-connect is 'display-only
+;; cider-repl-display-in-current-window
+;; (cider-jack-in)
+(setf (alist-get "\\*cider-repl.*" display-buffer-alist)
+      '(display-buffer-use-least-recent-window))
+
+(identity cider-print-fn)
+
 (define-advice nrepl-start-server-process (:around (orig-fun directory cmd on-port-callback) nrepl-start-server-process-advice)
   ;; insert prefix because sdkman doesn't insert the environment in emacs automatically
   ;; idk how to set it for the current emacs shell. may not be possible
   ;; was: "source \"$HOME/.sdkman/bin/sdkman-init.sh\" && { echo \"no\n\" | sdk env || echo 'no .sdkman?' } && sdk c java && "
-  (let ((cmd-prefix "source \"$HOME/.sdkman/bin/sdkman-init.sh\" && echo \"no\\n\" | sdk c java && "))
-    (funcall orig-fun directory (concat cmd-prefix cmd) on-port-callback)))
+  (let ((cmd-prefix "source \"$HOME/.sdkman/bin/sdkman-init.sh\" && echo \"no\\n\" | sdk c java && source $HOME/kevenv.sh && echo $AWS_ACCOUNT_ID && "))
+    (funcall orig-fun directory (concat cmd-prefix cider-jack-in-prefix cmd) on-port-callback)))
 #+end_src
 
 #+RESULTS:

@@ -12,6 +12,9 @@
                            ;; local dev version I have symlinked to ~/Documents/me/kev-nrepl
                            #_#_                                     kevonavin/kev-repl {:git/url "https://github.com/kevonavin/kev-nrepl.git"
                                                                                         :sha     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+
+                           org.clojure/core.async {:git/url "https://github.com/clojure/core.async"
+                                                   :sha "ad5c0475346a0ef36e6a8623cc1d3c1b6439ef96"}
                            lambdaisland/deep-diff2                  {:mvn/version "2.0.108"}
                            ;;babashka/process                         {:mvn/version "0.0.1"}
                            ;;babashka/fs                              {:mvn/version "0.0.1"}
@@ -43,7 +46,9 @@
                            ;; "-Djavax.net.ssl.keyStorePassword=bimjean"
                            ;; "-Djavax.net.debug=ssl"
                            ;; these three are for jvm profiling
-                           "-Djdk.attach.allowAttachSelf" "-XX:+UnlockDiagnosticVMOptions" "-XX:+DebugNonSafepoints"]
+                           "-Djdk.attach.allowAttachSelf"
+                           "-XX:+UnlockDiagnosticVMOptions"
+                           "-XX:+DebugNonSafepoints"]
 			  ;; I kind of think that cider-middleware has to be last? bc some weird shit with an invisible cache was happening
               ;; removed vlaaad.reveal.nrepl/middleware bc I can just open it later
               :main-opts  ["-m" "nrepl.cmdline" "--middleware" "[cider.nrepl/cider-middleware]" "--interactive" "--color"]
