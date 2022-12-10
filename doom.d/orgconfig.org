@@ -2,6 +2,24 @@
 
 this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_channel=thoughtbot][this video]] and the [[https://github.com/hrs/dotfiles/blob/main/emacs/dot-emacs.d/configuration.org][setup he uses]].
 
+* machine-specific
+#+begin_src elisp
+(add-hook! projectile-mode
+  (add-to-list 'projectile-project-search-path '("~/Documents/ekata/" . 2))
+  (add-to-list 'projectile-project-search-path '("~/Documents/me/" . 2)))
+
+
+(setq org-roam-directory "~/Documents/worknotes/org-roam")
+
+;; idk what this is, came with doom
+
+;; If you use `org' and don't want your org files in the default location below,
+;; change `org-directory'. It must be set before org loads!
+(setq org-directory "~/org/")
+
+;; c source directory so it doesn't prompt each time
+(setq find-function-C-source-directory "~/Documents/repos/etc/emacs/src")
+#+end_src
 * emacs setup / utils
 #+begin_src elisp
 ;; -*- lexical-binding: t; -*-
@@ -117,7 +135,136 @@ and make multi-term use it
 (add-hook! term-mode-hook
            'doom-modeline-mode)
 #+end_src
-* Keybindings
+* My Plugins
+** gpt
+#+begin_src elisp
+
+
+(defun surrounding-fn-bounds ()
+  (cond
+   ((eq major-mode 'clojure-mode) (cider-defun-at-point 'bounds))
+   ((eq major-mode 'emacs-lisp-mode) (let (beg end)
+                                       (save-excursion
+                                         (end-of-defun)
+                                         (beginning-of-defun)
+                                         (setq beg (point))
+                                         (end-of-defun)
+                                         (setq end (point)))
+                                       (list beg end)))
+   ('t nil)))
+
+
+(defun other-window ()
+  "gets the window that is not the current one"
+  (car (seq-filter (lambda (w) (not (eq (get-buffer-window) w)))
+                   (window-list))))
+
+;; TODO make this read from env var.
+(defvar openai-api-key-1 "***")
+
+(defun double-escape-string (s)
+  (thread-last s
+               (s-replace "\"" "\\\"")
+               (s-replace "\n" "\\n")))
+
+(defun atom-replace (old new tree)
+  (if (atom tree)
+      (if (eq old tree)
+          new
+        tree)
+    (cons (atom-replace old new (car tree)) (atom-replace old new (cdr tree)))))
+
+(defmacro thread$ (head &rest forms)
+  (if (car forms)
+      `(athread ,(atom-replace '$ head (car forms)) ,@(cdr forms))
+    head))
+
+(defun read-resp-buffer (b)
+  (with-current-buffer b
+    (goto-char (point-min))
+    (re-search-forward "^$")
+    (thread$ (json-read)
+             (alist-get 'choices $)
+             (aref $ 0)
+             (alist-get 'text $))))
+
+(cl-defun make-openai-request (&key url data handle)
+  "makes an http request to the openai edit api to the davinci code model and passes
+in `input' to get back edits made by the model"
+  (let* ((url-request-method "POST")
+         (url-request-data data)
+         (url-request-extra-headers
+          `(("Content-Type" . "application/json")
+            ("Authorization" . ,(concat "Bearer " openai-api-key-1))))
+         (_ (message (format "calling: %s with data: %s" url data)))
+         (resp (url-retrieve-synchronously url)))
+    (setq test-resp resp)
+    (funcall handle resp)))
+
+
+(progn test-resp)
+(with-current-buffer test-resp
+  (buffer-string))
+
+(read-resp-buffer test-resp)
+
+(defun code-davinci-edit-data (input)
+  `(:url "https://api.openai.com/v1/edits"
+    ;     "http://localhost:8000"
+    :data
+    ,(json-encode
+      `((model . "code-davinci-edit-001")
+        (input . ,input)
+        (instruction .
+         "Add code to the body of the function so it completes the documented task as simply as possible")
+        (temperature . 0)
+        (top_p . 1)))
+    :handle ,(lambda (resp) (read-resp-buffer resp))))
+
+(defun code-davinci-insert-data (input &optional separator)
+  (unless separator
+    (setq separator "\\[insert\\]"))
+  (cl-destructuring-bind (pre post) (s-split separator input)
+    (unless (and pre post)
+      (throw 'input-error (format "need separater '%s'" separator)))
+    `(:url "https://api.openai.com/v1/completions"
+      :data
+      ,(json-encode
+        `((model . "code-davinci-002")
+          (prompt . ,pre)
+          (suffix . ,post)
+          (temperature . 0)
+          (max_tokens . 512)
+          (top_p . 1)
+          (frequency_penalty . 0.3)
+          (presence_penalty . 0)))
+      :handle (lambda (resp)
+                (let ((insert (read-resp-buffer resp)))
+                  (concat ,pre insert ,post))))))
+
+(defun test-region (start end)
+  (interactive "r")
+  (print
+   (list start end (buffer-substring-no-properties start end))))
+
+(defun gpt-edit-2 ()
+  (interactive)
+  (let ((bounds (if (region-active-p)
+                    (list (region-beginning) (region-end))
+                  (surrounding-fn-bounds))))
+    (unless bounds
+      (message "unable to get fn bounds. Language not supported?"))
+    (when bounds
+      (replace-region-contents
+       (car bounds)
+       (cadr bounds)
+       (lambda ()
+         (thread$ bounds
+                  (apply 'buffer-substring-no-properties $)
+                  (code-davinci-insert-data $)
+                  (apply 'make-openai-request $)))))))
+
+#+end_src
 ** kevin paredit!
 
 #+begin_src elisp
@@ -239,10 +386,6 @@ supposed to kind of recreate my vimrc
 
 ** Random Config
 #+begin_src elisp
-(add-hook! projectile-mode
-  (add-to-list 'projectile-project-search-path '("~/Documents/ekata/" . 2))
-  (add-to-list 'projectile-project-search-path '("~/Documents/me/" . 2)))
-
 (setq projectile-switch-project-action #'projectile-dired)
 
 ;; makes the above thing actially work
@@ -284,8 +427,6 @@ supposed to kind of recreate my vimrc
 (setq confirm-kill-emacs nil)
 ;; when exit insert mode exit
 (setq evil-move-cursor-back t)
-;; c source directory so it doesn't prompt each time
-(setq find-function-C-source-directory "~/Documents/repos/etc/emacs/src")
 
 ;; flycheck has horrible perf.. maybe?
 (setq flycheck-check-syntax-automatically '(save idle-change))
@@ -391,13 +532,6 @@ eval thing
 
 #+RESULTS:
 
-idk what this is, came with doom
-
-#+begin_src elisp
-;; If you use `org' and don't want your org files in the default location below,
-;; change `org-directory'. It must be set before org loads!
-(setq org-directory "~/org/")
-#+end_src
 
 TODO archive
 
@@ -429,8 +563,7 @@ Make TAB act as if it were issued in a buffer of the language's major mode.
 
 ** org-roam
 #+begin_src elisp
-(setq org-roam-v2-ack t
-      org-roam-directory "~/Documents/repos/worknotes/org-roam")
+(setq org-roam-v2-ack t)
 
 ;; org roam to display in same window
 (customize-set-variable
@@ -546,6 +679,14 @@ for skewer
 
 #+RESULTS:
 
+** python
+#+begin_src elisp
+(add-hook! python-mode
+           (lsp)
+           (lsp-mode 1))
+#+end_src
+
+#+RESULTS:
 
 ** Clojure
 
@@ -901,17 +1042,13 @@ cider configs
 - [ ] keybindings
   - eval-test-around-point
   - eval-previously-evaled-test
-- [ ] modify autoindent to be smarter! maybe use clj-kondo?
 - [ ] auto right align for maps and lets (like how aggressive indent works)
-- [ ] popup (popwin?) for cider errors instead of other window
-- [ ] multiterm keybindings and alias it to just "term"
+- [ ] terminal keybindings
+- [ ] popup for cider errors instead of other window
 - [ ] move buffer 1,2,3,4,5,6...
-- [ ] make symbols that cider doesn't recognise be a different color. e.g. async-clj/go-ctch
-- [ ] investigate difference between clojure-layer and clojure-mode to bring back useful keybindings
-  - might need to change clojure major mode's leader?
-- [ ] format buffer with smartparens (bc it does that somehow)
-  - of integrate cljfmt, or something. ask imre if there's a standard config
+- [ ] clojure errors go to popwin, no focus?
 - [ ] advice for dired, select file, do delete all dired buffers so back buffer works
+- [X] modify autoindent to be smarter! maybe use clj-kondo?
 - [X] paredit
 - [X] fix eval to comment
 - [X] doom modeline
