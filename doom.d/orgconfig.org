@@ -1061,26 +1061,25 @@ cider configs
 #+end_src
 
 * TODO
+- [ ] default popup windows
 - [ ] lsp-mode & cider-mode competition?
   - company backend (lsp seems completely disabled for this?)
   - eldoc stuffs they definitely compete
 - [ ] company mode backend for text completion?
+- [ ] clojure errors go to popwin
+- [ ] keybindings
+  - terminal
+  - eval-previously-evaled-test
+- [ ] auto right align for maps and lets (like how aggressive indent works)
+- [ ] popup for cider errors instead of other window
 - [ ] archive todo
   - would also like a popup to ask where to put it?
   - this could have much overlapping functionality with add-to-list
     which allows you insert an org-roam link and add that link to a
     list somewhere and then you put whatever at that link
-- [ ] keybindings
-  - eval-test-around-point
-  - eval-previously-evaled-test
-- [ ] auto right align for maps and lets (like how aggressive indent works)
-- [ ] terminal
-- [ ] popups
-  - for cider errors
-  - for explaining variables
-- [ ] switching window buffers
 - [ ] clojure errors go to popwin, no focus?
-- [ ] advice for dired, select file, do delete all dired buffers so back buffer works
+- [X] advice for dired, select file, do delete all dired buffers so back buffer works
+- [X] eval-test-around-point
 - [X] modify autoindent to be smarter! maybe use clj-kondo?
 - [X] paredit
 - [X] fix eval to comment
