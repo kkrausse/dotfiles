@@ -9,7 +9,7 @@ export ZSH="$HOME/.oh-my-zsh"
 # load a random theme each time oh-my-zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
-ZSH_THEME="robbyrussell"
+ZSH_THEME=""
 
 # Set list of themes to pick from when loading at random
 # Setting this variable when ZSH_THEME=random will cause zsh to load
@@ -71,7 +71,7 @@ ZSH_THEME="robbyrussell"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git)
+plugins=""
 
 source $ZSH/oh-my-zsh.sh
 
@@ -121,8 +121,8 @@ function c() {
 
 PROMPT='%{$fg[green]%}$ %{$reset_color%}'
 
-ZSH_THEME_GIT_PROMPT_PREFIX="${fg[red]}"
-ZSH_THEME_GIT_PROMPT_SUFFIX=""
+# ZSH_THEME_GIT_PROMPT_PREFIX="${fg[red]}"
+# ZSH_THEME_GIT_PROMPT_SUFFIX=""
 
 # User configuration
 
@@ -186,25 +186,30 @@ export PATH="/usr/local/opt/texinfo/bin:$PATH"
 # emacs no window
 alias enw="emacs -nw"
 
+oldprompt=$PS1
 # >>> conda initialize >>>
+
 # !! Contents within this block are managed by 'conda init' !!
-# __conda_setup="$('/Users/kevinkrausse/mambaforge/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
-# if [ $? -eq 0 ]; then
-#     eval "$__conda_setup"
-# else
-#     if [ -f "/Users/kevinkrausse/mambaforge/etc/profile.d/conda.sh" ]; then
-#         . "/Users/kevinkrausse/mambaforge/etc/profile.d/conda.sh"
-#     else
-#         export PATH="/Users/kevinkrausse/mambaforge/bin:$PATH"
-#     fi
-# fi
-# unset __conda_setup
+__conda_setup="$('/Users/kevinkrausse/opt/anaconda3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__conda_setup"
+else
+    if [ -f "/Users/kevinkrausse/opt/anaconda3/etc/profile.d/conda.sh" ]; then
+        . "/Users/kevinkrausse/opt/anaconda3/etc/profile.d/conda.sh"
+    else
+    fi
+fi
+unset __conda_setup
 # <<< conda initialize <<<
+
+PS1=$oldprompt # fuck conda
 
 export PATH="/usr/local/opt/ruby/bin:$PATH"
 export PATH="/usr/local/lib/ruby/gems/3.0.0/bin:$PATH"
 export PATH="/opt/homebrew/opt/texinfo/bin:$PATH"
 export PATH="/opt/homebrew/bin:$PATH"
+
+POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=""
 
 # nvm shite
 export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
@@ -213,4 +218,3 @@ export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || pr
 #THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
 export SDKMAN_DIR="$HOME/.sdkman"
 [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
-

@@ -22,6 +22,8 @@
 ;  :recipe (:host github :repo "username/repo"
 ;           :files ("some-file.el" "src/lisp/*.el")))
 
+;; micorsoft's lsp for python
+(package! lsp-pyright)
 
 (package! clj-refactor :disable 1)
 (package! dired-du)

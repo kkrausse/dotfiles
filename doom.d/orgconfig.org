@@ -2,14 +2,19 @@
 
 this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_channel=thoughtbot][this video]] and the [[https://github.com/hrs/dotfiles/blob/main/emacs/dot-emacs.d/configuration.org][setup he uses]].
 
+#+begin_src elisp
+;; -*- lexical-binding: t; -*-
+#+end_src
+
 * machine-specific
 #+begin_src elisp
 (add-hook! projectile-mode
-  (add-to-list 'projectile-project-search-path '("~/Documents/ekata/" . 2))
-  (add-to-list 'projectile-project-search-path '("~/Documents/me/" . 2)))
+;;  (add-to-list 'projectile-project-search-path '("~/Documents/ekata/" . 2))
+;;  (add-to-list 'projectile-project-search-path '("~/Documents/me/" . 2))
+  )
 
 
-(setq org-roam-directory "~/Documents/worknotes/org-roam")
+(setq org-roam-directory "~/Documents/repos/worknotes/org-roam")
 
 ;; idk what this is, came with doom
 
@@ -21,6 +26,32 @@ this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_chann
 (setq find-function-C-source-directory "~/Documents/repos/etc/emacs/src")
 #+end_src
 * emacs setup / utils
+
+use =company-mode= everywhere
+
+#+begin_src elisp
+(use-package! company
+  :defer 2
+  :config
+  (setq company-idle-delay 0.5)
+  (company-mode-on))
+
+(global-company-mode 1)
+;; company mode setup
+
+(setq company-minimum-prefix-length 1
+      company-dabbrev-minimum-length 3
+      company-dabbrev-ignore-case 'keep-prefix
+      company-dabbrev-other-buffers t)
+
+(progn company-dabbrev-minimum-length)
+;; I don't want tab to cycle
+(map! :map company-active-map
+      "<tab>" #'company-complete)
+
+#+end_src
+
+
 #+begin_src elisp
 ;; -*- lexical-binding: t; -*-
 (setq multi-term-program "/bin/zsh")
@@ -35,44 +66,12 @@ this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_chann
 ;; what is this?!
 (exec-path-from-shell-initialize)
 
-(defmacro kev-fn (arglist &rest body)
-  (let ((fargsym (gensym "arg")))
-    `(lambda (,fargsym)
-       (cl-destructuring-bind ,arglist
-           ,fargsym
-         ,@body))))
+(window-prev-buffers)
 
-(defun kevindent (beg end)
-  "indents highlighted."
-  (interactive "r")
-  (kevin-paredit-mode 0)
-  (evil-normal-state 1)
-  (save-excursion
-    (goto-char beg)
-    (beginning-of-line)
-    (while (< (point) end)
-      (execute-kbd-macro (vector (string-to-char "i") ; insert
-                                 13 ; enter
-                                 )) ; this escape doesn't work
-      (evil-normal-state 1)
-      ;; up, delete line, down, beginning of line
-      (execute-kbd-macro "kddj0"))))
-
-;; just map everywhere
-(map! "C-c i" 'kevindent)
-
-;; this is actually great http://clhs.lisp.se/Body/03_dd.htm
-;; aslo the cl-defmacro definition has some of that info
-
-;; requires a (require 'straight) call. so quote it for now
-
-(defun kev-list-packages ()
-  (interactive)
-  (mapcar (kev-fn (build-time deps (&whole whole &key type package &allow-other-keys))
-                  (print (list :pack package
-                               :buildt build-time
-                               :type type)))
-          (hash-table-values straight--build-cache)))
+;; omg finding this was such a pain in the ass
+;; I need to use the debugger better! Just one single good debug
+;; was what finally got the issue. I could have done it like 3 hours ago
+(setq multi-term-switch-after-close nil)
 #+end_src
 
 #+RESULTS:
@@ -188,6 +187,8 @@ and make multi-term use it
              (aref $ 0)
              (alist-get 'text $))))
 
+(defvar test-resp)
+
 (cl-defun make-openai-request (&key url data handle)
   "makes an http request to the openai edit api to the davinci code model and passes
 in `input' to get back edits made by the model"
@@ -202,11 +203,11 @@ in `input' to get back edits made by the model"
     (funcall handle resp)))
 
 
-(progn test-resp)
-(with-current-buffer test-resp
-  (buffer-string))
+;; (progn test-resp)
+;; (with-current-buffer test-resp
+;;   (buffer-string))
 
-(read-resp-buffer test-resp)
+;; (read-resp-buffer test-resp)
 
 (defun code-davinci-edit-data (input)
   `(:url "https://api.openai.com/v1/edits"
@@ -348,6 +349,45 @@ in `input' to get back edits made by the model"
 * General Setup
 ** utility functions
 #+begin_src elisp
+(defmacro kev-fn (arglist &rest body)
+  (let ((fargsym (gensym "arg")))
+    `(lambda (,fargsym)
+       (cl-destructuring-bind ,arglist
+           ,fargsym
+         ,@body))))
+
+(defun kevindent (beg end)
+  "indents highlighted."
+  (interactive "r")
+  (kevin-paredit-mode 0)
+  (evil-normal-state 1)
+  (save-excursion
+    (goto-char beg)
+    (beginning-of-line)
+    (while (< (point) end)
+      (execute-kbd-macro (vector (string-to-char "i") ; insert
+                                 13 ; enter
+                                 )) ; this escape doesn't work
+      (evil-normal-state 1)
+      ;; up, delete line, down, beginning of line
+      (execute-kbd-macro "kddj0"))))
+
+;; just map everywhere
+(map! "C-c i" 'kevindent)
+
+;; this is actually great http://clhs.lisp.se/Body/03_dd.htm
+;; aslo the cl-defmacro definition has some of that info
+
+;; requires a (require 'straight) call. so quote it for now
+
+(defun kev-list-packages ()
+  (interactive)
+  (mapcar (kev-fn (build-time deps (&whole whole &key type package &allow-other-keys))
+                  (print (list :pack package
+                               :buildt build-time
+                               :type type)))
+          (hash-table-values straight--build-cache)))
+
 ;; stolen from borkdude: https://github.https://github.com/borkdude/prelude/blob/master/personal/init.el#L195om/borkdude/prelude/blob/master/personal/init.el#L195
 (defun copy-file-name-to-clipboard ()
   "Copy the current buffer file name to the clipboard."
@@ -361,8 +401,6 @@ in `input' to get back edits made by the model"
 #+end_src
 
 ** Keybindings
-supposed to kind of recreate my vimrc
-
 #+begin_src elisp
 ;; sets comma as spc m
 (setq evil-snipe-override-evil-repeat-keys nil)
@@ -375,14 +413,8 @@ supposed to kind of recreate my vimrc
 ;; so much better than key chord!!
 (setq-default evil-escape-key-sequence "jj")
 (setq-default evil-escape-delay 0.2)
-;; requires key-chord package
-;; (key-chord-define evil-insert-state-map "jj" 'evil-normal-state)
-;; (key-chord-mode 1)
-;; (setq key-chord-one-key-delay 0.4)
-#+end_src
 
-#+RESULTS:
-: 0.2
+#+end_src
 
 ** Random Config
 #+begin_src elisp
@@ -448,9 +480,6 @@ line numbers
 #+end_src
 ** perf fixes
 #+begin_src elisp
-
-;; -*- lexical-binding: t; -*-
-
 (defmacro timed-cached-funcall (time fn)
   (let ((last-time (gensym "last-time"))
         (cached-val (gensym "cached-val"))
@@ -468,17 +497,21 @@ line numbers
 ;; (setq kevin-project-root-timer
 ;;       (run-with-idle-timer 1 t (lambda () (setq kevin-project-root (projectile-project-root)))))
 (setq kev-cached-project-root (timed-cached-funcall 1.0 projectile-project-name))
+
 (setq frame-title-format '((:eval
                             (funcall kev-cached-project-root))))
 
 ;; noticed bad perf here
-(setq kev-cached-modeline-buffer-file-state (timed-cached-funcall 1.0 doom-modeline-update-buffer-file-state-icon))
-(define-advice doom-modeline-update-buffer-file-state-icon (:around (orig-fun &rest _) doom-modeline-advice)
+(setq kev-cached-modeline-buffer-file-state
+      (timed-cached-funcall 1.0 doom-modeline-update-buffer-file-state-icon))
+
+(define-advice doom-modeline-update-buffer-file-state-icon
+    (:around (orig-fun &rest _) doom-modeline-advice)
   (funcall kev-cached-modeline-buffer-file-state))
 #+end_src
 
 #+RESULTS:
-| :eval | (funcall kev-cached-project-root) |
+: doom-modeline-update-buffer-file-state-icon@doom-modeline-advice
 
 ** Project management
 *** git
@@ -488,20 +521,6 @@ line numbers
   (setq browse-at-remote-remote-type-regexps
         (cons '("github.dev.pages$" . "github")
               browse-at-remote-remote-type-regexps)))
-#+end_src
-
-*** =company=
-use =company-mode= everywhere
-
-#+begin_src elisp
-(use-package! company
-  :defer 2
-  :config
-    (setq company-idle-delay 0.5)
-    (company-mode-on))
-
-;; idk what this for...
-(global-company-mode)
 #+end_src
 
 * Org Mode
@@ -682,6 +701,7 @@ for skewer
 ** python
 #+begin_src elisp
 (add-hook! python-mode
+           (require 'lsp-pyright)
            (lsp)
            (lsp-mode 1))
 #+end_src
@@ -853,7 +873,6 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
         ;; disable sideline thing
         lsp-clojure-custom-server-command '("zsh" "-c" "clojure-lsp") ; to locally test clojure-lsp
         lsp-ui-sideline-enable nil
-        company-minimum-prefix-length 1
         lsp-file-watch-threshold 10000
         lsp-diagnostics-provider :none
         gc-cons-threshold (* 100 1024 1024)
@@ -949,7 +968,6 @@ cider configs
 
   ;; this is to fix the cider jack in to by my own thing because they changed some
   ;; version and got rid of =cider-clojure-cli-parameters=
-  (setq cider-inject-dependencies-at-jack-in 't)
   (setq cider-jack-in-dependencies nil)
   (setq cider-jack-in-auto-inject-clojure nil)
   (define-advice cider-jack-in-params (:around (orig-fun project-type) jack-in-param-advice)
@@ -958,6 +976,17 @@ cider configs
                               kev-clojure-cli-param-hist
                               :history 'kev-clojure-cli-param-hist))
       (_ (funcall orig-fun project-type)))))
+
+
+
+;; note, that with the advice, I disable it for clojure-cli
+(setq cider-inject-dependencies-at-jack-in t)
+
+(define-advice cider-inject-jack-in-dependencies (:around (orig-fun global-opts params project-type)
+                                                          inject-deps-advice)
+  (pcase project-type
+    ('clojure-cli params)
+    (_ (funcall orig-fun global-opts params project-type))))
 
 ;; so fucking stupid how they segregate into sesman sessions
 ;; This undoes that so any repl started from emacs is a candidate
@@ -986,14 +1015,12 @@ cider configs
 (setf (alist-get "\\*cider-repl.*" display-buffer-alist)
       '(display-buffer-use-least-recent-window))
 
-(identity cider-print-fn)
-
 (define-advice nrepl-start-server-process (:around (orig-fun directory cmd on-port-callback) nrepl-start-server-process-advice)
   ;; insert prefix because sdkman doesn't insert the environment in emacs automatically
   ;; idk how to set it for the current emacs shell. may not be possible
   ;; was: "source \"$HOME/.sdkman/bin/sdkman-init.sh\" && { echo \"no\n\" | sdk env || echo 'no .sdkman?' } && sdk c java && "
   (let ((cmd-prefix "source \"$HOME/.sdkman/bin/sdkman-init.sh\" && echo \"no\\n\" | sdk c java && source $HOME/kevenv.sh && echo $AWS_ACCOUNT_ID && "))
-    (funcall orig-fun directory (concat cmd-prefix cider-jack-in-prefix cmd) on-port-callback)))
+    (funcall orig-fun directory (concat cmd-prefix cmd) on-port-callback)))
 #+end_src
 
 #+RESULTS:
@@ -1034,6 +1061,10 @@ cider configs
 #+end_src
 
 * TODO
+- [ ] lsp-mode & cider-mode competition?
+  - company backend (lsp seems completely disabled for this?)
+  - eldoc stuffs they definitely compete
+- [ ] company mode backend for text completion?
 - [ ] archive todo
   - would also like a popup to ask where to put it?
   - this could have much overlapping functionality with add-to-list
@@ -1043,9 +1074,11 @@ cider configs
   - eval-test-around-point
   - eval-previously-evaled-test
 - [ ] auto right align for maps and lets (like how aggressive indent works)
-- [ ] terminal keybindings
-- [ ] popup for cider errors instead of other window
-- [ ] move buffer 1,2,3,4,5,6...
+- [ ] terminal
+- [ ] popups
+  - for cider errors
+  - for explaining variables
+- [ ] switching window buffers
 - [ ] clojure errors go to popwin, no focus?
 - [ ] advice for dired, select file, do delete all dired buffers so back buffer works
 - [X] modify autoindent to be smarter! maybe use clj-kondo?
