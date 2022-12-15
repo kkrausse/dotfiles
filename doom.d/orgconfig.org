@@ -983,19 +983,19 @@ cider configs
 #+end_src
 
 * TODO
+- [ ] fix eldoc signatures
+- [ ] clojure errors go to popwin
+- [ ] keybindings
+  - terminal
+- [ ] auto right align for maps and lets (like how aggressive indent works)
+- [ ] popup for cider errors instead of other window
+- [ ] move buffer 1,2,3,4,5,6...
 - [ ] archive todo
   - would also like a popup to ask where to put it?
   - this could have much overlapping functionality with add-to-list
     which allows you insert an org-roam link and add that link to a
     list somewhere and then you put whatever at that link
-- [ ] keybindings
-  - eval-test-around-point
-  - eval-previously-evaled-test
-- [ ] auto right align for maps and lets (like how aggressive indent works)
-- [ ] popup for cider errors instead of other window
-- [ ] move buffer 1,2,3,4,5,6...
-- [ ] clojure errors go to popwin
-- [ ] advice for dired, select file, do delete all dired buffers so back buffer works
+- [X] advice for dired, select file, do delete all dired buffers so back buffer works
 - [X] modify autoindent to be smarter! maybe use clj-kondo?
 - [X] paredit
 - [X] fix eval to comment
