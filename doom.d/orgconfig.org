@@ -4,27 +4,9 @@ this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_chann
 
 #+begin_src elisp
 ;; -*- lexical-binding: t; -*-
+(load "~/.doom.d/machine-specific.el")
 #+end_src
 
-* machine-specific
-#+begin_src elisp
-(add-hook! projectile-mode
-;;  (add-to-list 'projectile-project-search-path '("~/Documents/ekata/" . 2))
-;;  (add-to-list 'projectile-project-search-path '("~/Documents/me/" . 2))
-  )
-
-
-(setq org-roam-directory "~/Documents/repos/worknotes/org-roam")
-
-;; idk what this is, came with doom
-
-;; If you use `org' and don't want your org files in the default location below,
-;; change `org-directory'. It must be set before org loads!
-(setq org-directory "~/org/")
-
-;; c source directory so it doesn't prompt each time
-(setq find-function-C-source-directory "~/Documents/repos/etc/emacs/src")
-#+end_src
 * emacs setup / utils
 
 use =company-mode= everywhere
@@ -1066,6 +1048,7 @@ cider configs
   - company backend (lsp seems completely disabled for this?)
   - eldoc stuffs they definitely compete
 - [ ] company mode backend for text completion?
+- [ ] move machine-specific setup into separate file so they don't have to keep changing
 - [ ] clojure errors go to popwin
 - [ ] keybindings
   - terminal
