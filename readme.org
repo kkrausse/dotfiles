@@ -28,6 +28,7 @@ ln -s $(pwd)/doom.d/ ~/.doom.d
 ln -s $(pwd)/zshrc ~/.zshrc
 ln -s $(pwd)/gitconfig ~/.gitconfig
 ln -s $(pwd)/lsp ~/.lsp
+ln -s $(pwd)/clj-kondo ~/.clj-kondo
 ln -s $(pwd)/bin ~/bin
 ln -s $(pwd)/vimrc ~/.vimrc
 ln -s $(pwd)/clojure/deps.edn ~/.clojure/deps.edn

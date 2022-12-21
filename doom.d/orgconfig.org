@@ -29,7 +29,8 @@ use =company-mode= everywhere
 (progn company-dabbrev-minimum-length)
 ;; I don't want tab to cycle
 (map! :map company-active-map
-      "<tab>" #'company-complete)
+      "<tab>" #'company-complete
+      )
 
 #+end_src
 
@@ -60,7 +61,7 @@ use =company-mode= everywhere
 : kev-list-packages
 
 * UI preferences
-** General
+** Theme
 
 Theme and resize
 #+begin_src elisp
@@ -354,8 +355,34 @@ in `input' to get back edits made by the model"
       ;; up, delete line, down, beginning of line
       (execute-kbd-macro "kddj0"))))
 
+(defun projectile-term ()
+  "if terminal exists in project, switch to it. else, create at project root"
+  (interactive)
+  (let ((term-buf (seq-some (lambda (b)
+                              (with-current-buffer b
+                                (and (derived-mode-p 'term-mode) b)))
+                            (projectile-project-buffers))))
+    (if term-buf
+        (switch-to-buffer term-buf)
+      (progn
+        (find-file (projectile-project-root))
+        (multi-term)))))
+
 ;; just map everywhere
-(map! "C-c i" 'kevindent)
+(map!
+ (:prefix ("SPC j" . "kevin stuff")
+  :nv  "i" 'kevindent
+  :nv "t" 'projectile-term
+  (:prefix ("e" . "edit")
+           :n "e" 'edit-env-file
+           :n "c" 'doom-edit-config)))
+
+;;(general-auto-unbind-keys)
+
+(map!
+ (:prefix ("C-c j" . "kevin stuff")
+   (:prefix ("e" . "edit...")
+            "e" 'edit-env-file)))
 
 ;; this is actually great http://clhs.lisp.se/Body/03_dd.htm
 ;; aslo the cl-defmacro definition has some of that info
@@ -411,6 +438,8 @@ in `input' to get back edits made by the model"
   (let ((prev-buf (current-buffer)))
     (funcall-interactively orig-fun)
     (when (and (eq 'dired-mode (buffer-local-value 'major-mode prev-buf))
+               ;; ONLY FOR dired buffer! Leave it if we go to a file?
+               (eq 'dired-mode (buffer-local-value 'major-mode (current-buffer)))
                ;; make sure it's not currently displayed
                (not (seq-find (lambda (w)
                                 (eq prev-buf
@@ -902,7 +931,8 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
 
   (define-clojure-indent
     (into 1)
-    (do-template :form)
+    (do-template 2)
+    (sc.api/letsc 1)
     (macrolet '(1 ((:defn)) nil))))
 
     ;; makes so aggressive indent won't go until you exit insert mode
@@ -1043,6 +1073,7 @@ cider configs
 #+end_src
 
 * TODO
+- [ ] projectile terminal (gets or creates terminal at root of current project)
 - [ ] default popup windows
 - [ ] lsp-mode & cider-mode competition?
   - company backend (lsp seems completely disabled for this?)

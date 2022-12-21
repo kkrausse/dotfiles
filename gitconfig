@@ -1,6 +1,8 @@
 [user]
 	email = kkrausse@ucdavis.edu
 	name = kkrausse
+	# email = kevin.krausse@taxbit.com
+	# name = kevin.krausse
 [diff "sopsdiffer"]
 	textconv = sops -d
 [alias]

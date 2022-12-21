@@ -1,5 +1,7 @@
 {:log-path                      "/tmp/clojure-lsp.out"
  :show-docs-arity-on-same-line? true
+ ;; this *was* so I could get line number from git repos with clojure, but I think I found a better way.
+ :source-paths #{"/Users/kevinkrausse/Documents/repos/clojure/src/clj/" "/Users/kevinkrausse/Documents/repos/clojure/src/clj/core.async/src"}
  :cljfmt                        {
                                  :indentation?                          true
                                  :remove-trailing-whitespace?           true

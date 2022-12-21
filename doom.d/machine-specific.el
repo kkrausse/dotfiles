@@ -14,3 +14,7 @@
 
 ;; c source directory so it doesn't prompt each time
 (setq find-function-C-source-directory "~/Documents/repos/etc/emacs/src")
+
+(defun edit-env-file ()
+  (interactive)
+  (find-file "~/kevenv.sh"))
