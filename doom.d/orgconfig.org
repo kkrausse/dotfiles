@@ -318,7 +318,8 @@ in `input' to get back edits made by the model"
   "L" 'sp-down-sexp
   "j" 'sp-down-sexp
   "k" 'sp-backward-up-sexp
-  "." 'kevin-paredit-mode)
+  "." 'kevin-paredit-mode
+  (kbd "<escape>") 'kevin-paredit-mode)
 
 (general-define-key
  :states '(normal visual)
@@ -339,21 +340,43 @@ in `input' to get back edits made by the model"
            ,fargsym
          ,@body))))
 
-(defun kevindent (beg end)
+;; just realized this isn't even needed because the builtin
+;; browse at remote already handles this exact situation
+(defun kev-get-commit (beg end)
+  (interactive "r")
+  (require 'browse-at-remote)
+  (let* ((commit (string-trim (buffer-substring beg end))) ;; was using (current-kill 0), but annoying
+         (url
+          (browse-at-remote--commit-url commit)))
+    (kill-new url)
+    (message (concat "copied: " url))))
+
+(defun kev-project-ignored-p (root)
+  (or (doom-project-ignored-p root)
+      (string-match-p "/node_modules/" root)
+      (string-match-p "/.cache/" root)
+      (string-match-p "/.gitlibs/" root)))
+
+(setq projectile-ignored-project-function 'kev-project-ignored-p)
+
+;; evil-beginning-of-line
+;; newline-and-indent
+;; evil-next-line
+(defun kev-indent (beg end)
   "indents highlighted."
   (interactive "r")
-  (kevin-paredit-mode 0)
-  (evil-normal-state 1)
-  (save-excursion
-    (goto-char beg)
-    (beginning-of-line)
-    (while (< (point) end)
-      (execute-kbd-macro (vector (string-to-char "i") ; insert
-                                 13 ; enter
-                                 )) ; this escape doesn't work
-      (evil-normal-state 1)
-      ;; up, delete line, down, beginning of line
-      (execute-kbd-macro "kddj0"))))
+  (let ((end-point (save-excursion
+                    (goto-char end)
+                    (evil-end-of-line)
+                    (point))))
+    (save-excursion
+      (goto-char beg)
+      (indent-according-to-mode)
+      ;; such as a way to do the last line, but never try to go past it
+      (while (< (point) end-point)
+        (evil-next-line)
+        (indent-according-to-mode)
+        (evil-end-of-line)))))
 
 (defun projectile-term ()
   "if terminal exists in project, switch to it. else, create at project root"
@@ -368,21 +391,35 @@ in `input' to get back edits made by the model"
         (find-file (projectile-project-root))
         (multi-term)))))
 
+(defun get-displayed-buffer (pred)
+  (seq-some (lambda (w) (with-current-buffer (window-buffer w)
+                        (and (funcall pred)
+                             (window-buffer w))))
+          (window-list)))
+
+(defun call-previous-term-cmd ()
+  (interactive)
+  (with-current-buffer (get-displayed-buffer (lambda () (eq 'term-mode major-mode)))
+    (term-send-up)
+    (term-send-return)))
+
 ;; just map everywhere
 (map!
  (:prefix ("SPC j" . "kevin stuff")
-  :nv  "i" 'kevindent
-  :nv "t" 'projectile-term
-  (:prefix ("e" . "edit")
-           :n "e" 'edit-env-file
-           :n "c" 'doom-edit-config)))
+          :nv  "i" 'kev-indent
+          :nv "t" 'projectile-term
+          :nv "pt" 'call-previous-term-cmd
+          (:prefix ("e" . "edit")
+                   :n "e" 'edit-env-file
+                   :n "c" 'doom-edit-config
+                   :n "t" '(lambda () (interactive) (find-file "~/dotfiles/tmp.org")))))
 
-;;(general-auto-unbind-keys)
+(add-hook! magit-mode
+  (map!
+   (:prefix ("SPC j" . "kevin stuff")
+            :map magit-section-mode-map
+            :nv "c" 'kev-get-commit)))
 
-(map!
- (:prefix ("C-c j" . "kevin stuff")
-   (:prefix ("e" . "edit...")
-            "e" 'edit-env-file)))
 
 ;; this is actually great http://clhs.lisp.se/Body/03_dd.htm
 ;; aslo the cl-defmacro definition has some of that info
@@ -408,6 +445,9 @@ in `input' to get back edits made by the model"
       (kill-new filename)
       (message "Copied buffer file name '%s' to the clipboard." filename))))
 #+end_src
+
+#+RESULTS:
+: copy-file-name-to-clipboard
 
 ** Keybindings
 #+begin_src elisp
@@ -636,6 +676,13 @@ Make TAB act as if it were issued in a buffer of the language's major mode.
 : #s(hash-table size 65 test eql rehash-size 1.5 rehash-threshold 0.8125 data (:use-package (25478 22530 426227 0) :init (25478 22530 426157 0) :init-secs (0 0 11 0) :use-package-secs (0 0 89 0)))
 
 * Language-Specific
+#+begin_src elisp
+(add-hook! rustic-mode
+           (lsp)
+           (lsp-mode 1))
+#+end_src
+
+
 ** Lisp
 
 goto for elisp
@@ -724,35 +771,16 @@ for skewer
 nice keybindings
 
 #+begin_src elisp
-
-
-;; basically, idea is to get a git tag from the buffer,
-;; call an api to get a commit hash, then look at the magit integration for how to
-;; convert that into a link.
-;;
-;; Might just do the simple case for github so It'll work for clojure stuff
-(defun kev-gh-link ()
-  (interactive)
-  ;; e.g. "clojure-1.10.0.jar:clojure/core.clj"
-  (when-let* ((fname (buffer-name))
-              (splitted (s-split ".jar:" fname))
-              (tag  (car splitted))
-              (file (cadr splitted)))
-    (list tag file)))
-
-
-
-
 (defvar kevin-clojure-playbook
-      '("((requiring-resolve 'dev/reset))"
-        "((requiring-resolve 'vlaaad.reveal/inspect) *1)"
-        "(doseq [_ (range 20)] (prn (tap> nil)))"
-        "((requiring-resolve 'vlaaad.reveal/tap-log) :close-difficulty :easy)"
-        "((requiring-resolve 'pjstadig.humane-test-output/activate!))"
-        "((requiring-resolve 'lambdaisland.classpath/update-classpath!) {:aliases [:test :dev :local-dev]})"
-        "(tap> {:vlaaad.reveal/command '(defaction ::intern-as-x [x]
+  '("((requiring-resolve 'dev/reset))"
+    "((requiring-resolve 'vlaaad.reveal/inspect) *1)"
+    "(doseq [_ (range 20)] (prn (tap> nil)))"
+    "((requiring-resolve 'vlaaad.reveal/tap-log) :close-difficulty :easy)"
+    "((requiring-resolve 'pjstadig.humane-test-output/activate!))"
+    "((requiring-resolve 'lambdaisland.classpath/update-classpath!) {:aliases [:test :dev :local-dev]})"
+    "(tap> {:vlaaad.reveal/command '(defaction ::intern-as-x [x]
                                    #(intern 'user 'x x))})"
-        "(set! *warn-on-reflection* true)"))
+    "(set! *warn-on-reflection* true)"))
 
 (defun kevin-clojure-playbook (&optional output-to-current-buffer)
   "evaluate something from the playbook (w/ cider)"
@@ -776,9 +804,53 @@ nice keybindings
                                      (point))))
                      (clojure-backward-logical-sexp)
                      (list (point) end)))))
+  (save-excursion
+    (clojure-align beg end)
+    (lsp-format-region beg end)))
+
+(add-hook! clojure-mode
+  ;;(aggressive-indent-mode) this shit so slow :(
+  (hs-minor-mode)
+
+  (setq cider-comment-prefix "(comment\n"
+        cider-comment-continued-prefix "  "
+        indent-region-function nil
+        cider-comment-postfix ")"
+
+        clojure-toplevel-inside-comment-form t
+        ;; code alignment
+        clojure-align-forms-automatically t
+        )
+
+
+  (defun kev-format-buffer ()
+      (interactive)
       (save-excursion
-        (clojure-align beg end)
-        (lsp-format-region beg end)))
+        (lsp-format-buffer)
+        (clojure-align (point-min) (point-max))))
+
+  (define-clojure-indent
+    (into 1)
+    (do-template 2)
+    (sc.api/letsc 1)
+    (macrolet '(1 ((:defn)) nil))))
+
+(add-hook! clojure-mode
+  )
+
+(define-advice aggressive-indent--indent-if-changed (:around (orig-fun buffer) aggressive-indent-advice)
+  (when (not (with-current-buffer buffer
+               (evil-insert-state-p)))
+    (funcall orig-fun buffer)))
+
+;; prettier indentation!
+(define-advice cider-maybe-insert-multiline-comment
+    (:around (orig-fun result comment-prefix continued-prefix comment-postfix) cider-comment-advice)
+  (funcall orig-fun result comment-prefix continued-prefix comment-postfix)
+  (save-excursion
+    (let ((end (point)))
+      (sp-backward-sexp)
+      (kev-indent (point) end))))
 
 (map! :mode clojure-mode
       :localleader
@@ -809,7 +881,7 @@ nice keybindings
       "="  #'kev-format-form
       "ip" #'(lambda () (interactive) (insert "clojure.pprint/pprint")))
 
- (defun cider-jack-in-babashka ()
+(defun cider-jack-in-babashka ()
   "Start an babashka nREPL server for the current project and connect to it."
   (interactive)
   (let* ((default-directory (project-root (project-current t)))
@@ -822,8 +894,8 @@ nice keybindings
                            ;; Default behavior: write to process buffer
                            (internal-default-process-filter proc string))))
     (set-process-filter
-       (start-file-process "babashka" "*babashka*" "bb" "--nrepl-server" "0")
-       process-filter)))
+     (start-file-process "babashka" "*babashka*" "bb" "--nrepl-server" "0")
+     process-filter)))
 #+end_src
 
 #+RESULTS:
@@ -847,103 +919,6 @@ lsp utils
         (cider-connect-clj `(:host "localhost"
                              :port ,port))))))
 #+end_src
-
-#+RESULTS:
-: lsp-clojure-nrepl-connect
-
-for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#indentation-of-macro-forms][clojure mode docs]] and at [[https://docs.cider.mx/cider/indent_spec.html][cider docs]]
-
-#+begin_src elisp
-(use-package! lsp-ui
-  :commands lsp-ui-mode)
-
-
-;; really disable cider eldoc
-;; idk if this is actually needed anymore
-;; (define-advice cider-eldoc-setup (:around (orig-fun) cider-eldoc-advice)
-;;   nil)
-
-(use-package! lsp-mode
-  :hook ((clojure-mode . lsp)
-         (clojurec-mode . lsp)
-         (clojurescript-mode . lsp)
-         (lsp-mode . lsp-enable-which-key-integration))
-  :commands lsp
-  :config
-
-  ;; add going back
-  (lsp-define-conditional-key lsp-command-map
-    "gb" xref-go-back "go back" t)
-  ;; add paths to your local installation of project mgmt tools, like lein
-
-  ;; disable modeline diagnostics
-  ;; this takes a long time on a screen rerender. Plus I never use
-  (setq lsp-modeline-diagnostics-enable nil
-        ;; focus help window when it shows up
-        help-window-select t
-        ;; disable sideline thing
-        lsp-clojure-custom-server-command '("zsh" "-c" "clojure-lsp") ; to locally test clojure-lsp
-        lsp-ui-sideline-enable nil
-        lsp-file-watch-threshold 10000
-        lsp-diagnostics-provider :none
-        gc-cons-threshold (* 100 1024 1024)
-        read-prcess-output-max (* 1024 1024)
-        ;; disable big obnoxious window at top
-        lsp-ui-doc-enable nil
-        ;; from https://www.youtube.com/watch?v=grL3DQyvneI&ab_channel=LondonClojurians
-        cider-eldoc-display-for-symbol-at-point nil ;; disable cider eldoc
-        cider-repl-display-help-banner nil      ;; disable help banner
-        ;; no header see https://emacs-lsp.github.io/lsp-mode/tutorials/how-to-turn-off/
-        lsp-headerline-breadcrumb-enable nil
-        )
-
-  ;; don't watch public dir either. alternatively move to /target bc that's the default
-  (add-to-list 'lsp-file-watch-ignored-directories
-               "[/\\\\]public\\'")
-  ;; necessary for showing references without relative path
-  (setq ivy-xref-use-file-path t)
-  (setq xref-file-name-display 'project-relative)
-  (setq xref-show-definitions-function #'xref-show-definitions-buffer-at-bottom)
-  (after! xref
-    (setq xref-show-definitions-function #'xref-show-definitions-buffer-at-bottom))
-
-  (dolist (m '(clojure-mode
-               clojurec-mode
-               clojurescript-mode
-               clojurex-mode))
-    (add-to-list 'lsp-language-id-configuration `(,m . "clojure"))))
-
-(add-hook! clojure-mode
-  ;;(aggressive-indent-mode) this shit so slow :(
-  (hs-minor-mode)
-
-  (setq clojure-toplevel-inside-comment-form t
-        ;; code alignment
-        clojure-align-forms-automatically t
-        )
-
-
-  (defun kev-format-buffer ()
-      (interactive)
-      (save-excursion
-        (lsp-format-buffer)
-        (clojure-align (point-min) (point-max))))
-
-  (define-clojure-indent
-    (into 1)
-    (do-template 2)
-    (sc.api/letsc 1)
-    (macrolet '(1 ((:defn)) nil))))
-
-    ;; makes so aggressive indent won't go until you exit insert mode
-(define-advice aggressive-indent--indent-if-changed (:around (orig-fun buffer) aggressive-indent-advice)
-  (when (not (with-current-buffer buffer
-               (evil-insert-state-p)))
-    (funcall orig-fun buffer)))
-#+end_src
-
-#+RESULTS:
-: aggressive-indent--indent-if-changed@aggressive-indent-advice
 
 cider configs
 
@@ -1036,10 +1011,96 @@ cider configs
 #+end_src
 
 #+RESULTS:
+: lsp-clojure-nrepl-connect
+
+** lsp
+for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#indentation-of-macro-forms][clojure mode docs]] and at [[https://docs.cider.mx/cider/indent_spec.html][cider docs]]
+
+#+begin_src elisp
+(use-package! lsp-ui
+  :commands lsp-ui-mode)
+
+
+;; really disable cider eldoc
+;; idk if this is actually needed anymore
+;; (define-advice cider-eldoc-setup (:around (orig-fun) cider-eldoc-advice)
+;;   nil)
+
+(add-hook! lsp-mode
+           ;; because lsp indent is incredibly annoying for clojure
+           ;; TODO restrict to just clojure?
+           (setq indent-region-function nil))
+
+(use-package! lsp-mode
+  :hook ((clojure-mode . lsp)
+         (clojurec-mode . lsp)
+         (clojurescript-mode . lsp)
+         (go-mode .lsp)
+         (lsp-mode . lsp-enable-which-key-integration))
+  :commands lsp
+  :config
+
+  ;; add going back
+  (lsp-define-conditional-key lsp-command-map
+    "gb" xref-go-back "go back" t)
+  ;; add paths to your local installation of project mgmt tools, like lein
+
+  ;; disable modeline diagnostics
+  ;; this takes a long time on a screen rerender. Plus I never use
+  (setq lsp-modeline-diagnostics-enable nil
+        ;; focus help window when it shows up
+        help-window-select t
+        ;; disable sideline thing
+        lsp-clojure-custom-server-command '("zsh" "-c" "clojure-lsp") ; to locally test clojure-lsp
+        lsp-ui-sideline-enable nil
+        lsp-file-watch-threshold 10000
+        lsp-diagnostics-provider :none
+        gc-cons-threshold (* 100 1024 1024)
+        read-prcess-output-max (* 1024 1024)
+        ;; disable big obnoxious window at top
+        lsp-ui-doc-enable nil
+        ;; from https://www.youtube.com/watch?v=grL3DQyvneI&ab_channel=LondonClojurians
+        cider-eldoc-display-for-symbol-at-point nil ;; disable cider eldoc
+        cider-repl-display-help-banner nil      ;; disable help banner
+        ;; no header see https://emacs-lsp.github.io/lsp-mode/tutorials/how-to-turn-off/
+        lsp-headerline-breadcrumb-enable nil
+        )
+
+  ;; don't watch public dir either. alternatively move to /target bc that's the default
+  (add-to-list 'lsp-file-watch-ignored-directories
+               "[/\\\\]public\\'")
+  ;; necessary for showing references without relative path
+  (setq ivy-xref-use-file-path t)
+  (setq xref-file-name-display 'project-relative)
+  (setq xref-show-definitions-function #'xref-show-definitions-buffer-at-bottom)
+  (after! xref
+    (setq xref-show-definitions-function #'xref-show-definitions-buffer-at-bottom))
+
+  (dolist (m '(clojure-mode
+               clojurec-mode
+               clojurescript-mode
+               clojurex-mode))
+    (add-to-list 'lsp-language-id-configuration `(,m . "clojure"))))
+
+    ;; makes so aggressive indent won't go until you exit insert mode
+(define-advice aggressive-indent--indent-if-changed (:around (orig-fun buffer) aggressive-indent-advice)
+  (when (not (with-current-buffer buffer
+               (evil-insert-state-p)))
+    (funcall orig-fun buffer)))
+#+end_src
+
+
+#+RESULTS:
 : nrepl-start-server-process@nrepl-start-server-process-advice
 
 
+** go
+#+begin_src elisp
+
+(add-hook! go-mode-hook)
+#+end_src
 ** cue
+
 #+begin_src emacs-lisp
 (defconst cue-keywords
   '("package" "import" "for" "in" "if" "let"))

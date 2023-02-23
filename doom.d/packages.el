@@ -49,7 +49,7 @@
 (package! exec-path-from-shell
   :recipe (:host github
            :repo "purcell/exec-path-from-shell"
-		   :branch "master"))
+           :branch "master"))
 
 (package! browse-at-remote
   :pin "cef26f2c063f2473af42d0e126c8613fe2f709e4"
@@ -68,6 +68,12 @@
   :recipe (:host github
            :repo "org-roam/org-roam"
 		   :files (:defaults "extensions/*")))
+
+(package! jet
+  :recipe (:type git
+           :host nil
+           :branch "master"
+           :repo "https://github.com/ericdallo/jet.el"))
 
 (package! org-bullets)
 

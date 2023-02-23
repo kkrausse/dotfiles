@@ -4,8 +4,9 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(groovy-indent-offset 2)
- '(org-roam-db-autosync-mode t)
+ '(org-roam-db-autosync-mode t t)
  '(org-src-window-setup 'current-window)
+ '(projectile-sort-order 'recentf)
  '(safe-local-variable-values
    '((elisp-lint-indent-specs
       (if-let* . 2)
@@ -49,12 +50,12 @@
       (org-roam-with-file . 2))
      (elisp-lint-ignored-validators "byte-compile" "package-lint")
      (eval font-lock-add-keywords nil
-           `((,(concat "("
-                       (regexp-opt
-                        '("sp-do-move-op" "sp-do-move-cl" "sp-do-put-op" "sp-do-put-cl" "sp-do-del-op" "sp-do-del-cl")
-                        t)
-                       "\\_>")
-              1 'font-lock-variable-name-face)))
+      `((,(concat "("
+                  (regexp-opt
+                   '("sp-do-move-op" "sp-do-move-cl" "sp-do-put-op" "sp-do-put-cl" "sp-do-del-op" "sp-do-del-cl")
+                   t)
+                  "\\_>")
+         1 'font-lock-variable-name-face)))
      (cider-clojure-cli-global-options . "-A:test:dev")
      (cider-clojure-cli-global-options . "-M:test:dev:local-dev")
      (cider-clojure-cli-global-options . "-A:test:dev:local-dev")
