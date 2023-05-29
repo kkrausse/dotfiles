@@ -25,7 +25,11 @@
 ;; micorsoft's lsp for python
 (package! lsp-pyright)
 
+;; fuck this thing
 (package! clj-refactor :disable 1)
+;; this package is satan's child I swear
+;; (package! better-jumper :disable 1)
+
 (package! dired-du)
 (package! key-chord)
 (package! doom-themes)
@@ -51,8 +55,14 @@
            :repo "purcell/exec-path-from-shell"
            :branch "master"))
 
+
+(package! restclient
+  :recipe (:host github
+           :repo "pashky/restclient.el"
+           :branch "master"))
+
 (package! browse-at-remote
-  :pin "cef26f2c063f2473af42d0e126c8613fe2f709e4"
+ ;; :pin "cef26f2c063f2473af42d0e126c8613fe2f709e4"
   :recipe (:host github
            :repo "rmuslimov/browse-at-remote"
            :branch "master"))

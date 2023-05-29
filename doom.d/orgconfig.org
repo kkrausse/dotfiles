@@ -7,6 +7,7 @@ this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_chann
 (load "~/.doom.d/machine-specific.el")
 #+end_src
 
+
 * emacs setup / utils
 
 use =company-mode= everywhere
@@ -18,13 +19,19 @@ use =company-mode= everywhere
   (setq company-idle-delay 0.5)
   (company-mode-on))
 
+;; DONT add regex search to the jump stack!
+(evil-set-command-property 'evil-ex-search-next :jump nil)
+(evil-set-command-property 'evil-ex-search-backward :jump nil)
+
 (global-company-mode 1)
 ;; company mode setup
 
 (setq company-minimum-prefix-length 1
       company-dabbrev-minimum-length 3
       company-dabbrev-ignore-case 'keep-prefix
-      company-dabbrev-other-buffers t)
+      company-dabbrev-other-buffers t
+
+      display-buffer-base-action '((display-buffer-reuse-window display-buffer-use-least-recent-window)))
 
 (progn company-dabbrev-minimum-length)
 ;; I don't want tab to cycle
@@ -33,6 +40,8 @@ use =company-mode= everywhere
       )
 
 #+end_src
+
+#+RESULTS:
 
 
 #+begin_src elisp
@@ -118,6 +127,7 @@ and make multi-term use it
            'doom-modeline-mode)
 #+end_src
 * My Plugins
+
 ** gpt
 #+begin_src elisp
 
@@ -333,6 +343,16 @@ in `input' to get back edits made by the model"
 * General Setup
 ** utility functions
 #+begin_src elisp
+(defmacro kev-setq-local (&rest kvs)
+  `(progn
+     ,@(mapcar
+        (lambda (pair)
+          (cl-destructuring-bind (sym val) pair
+            `(progn
+               (make-local-variable ',sym)
+               (setq ,sym ,val))))
+        (seq-partition kvs 2))))
+
 (defmacro kev-fn (arglist &rest body)
   (let ((fargsym (gensym "arg")))
     `(lambda (,fargsym)
@@ -383,13 +403,14 @@ in `input' to get back edits made by the model"
   (interactive)
   (let ((term-buf (seq-some (lambda (b)
                               (with-current-buffer b
-                                (and (derived-mode-p 'term-mode) b)))
+                                (and (derived-mode-p 'vterm-mode) b)))
                             (projectile-project-buffers))))
     (if term-buf
         (switch-to-buffer term-buf)
       (progn
-        (find-file (projectile-project-root))
-        (multi-term)))))
+        ;; no need to open in root bc vterm here does that!
+        ;;(find-file (projectile-project-root))
+        (+vterm/here nil)))))
 
 (defun get-displayed-buffer (pred)
   (seq-some (lambda (w) (with-current-buffer (window-buffer w)
@@ -408,6 +429,7 @@ in `input' to get back edits made by the model"
  (:prefix ("SPC j" . "kevin stuff")
           :nv  "i" 'kev-indent
           :nv "t" 'projectile-term
+          :nv "pp" 'jet-to-clipboard
           :nv "pt" 'call-previous-term-cmd
           (:prefix ("e" . "edit")
                    :n "e" 'edit-env-file
@@ -569,9 +591,10 @@ line numbers
 #+begin_src elisp
 (use-package! browse-at-remote
   :config
-  (setq browse-at-remote-remote-type-regexps
-        (cons '("github.dev.pages$" . "github")
-              browse-at-remote-remote-type-regexps)))
+  (print (list "regexps: " browse-at-remote-remote-type-regexps))
+  (add-to-list 'browse-at-remote-remote-type-regexps
+               '(:host "github.dev.pages$" :type "github"))
+  )
 #+end_src
 
 * Org Mode
@@ -677,11 +700,55 @@ Make TAB act as if it were issued in a buffer of the language's major mode.
 
 * Language-Specific
 #+begin_src elisp
-(add-hook! rustic-mode
-           (lsp)
-           (lsp-mode 1))
+
+;; terraform lsp doesn't do shit
+;;
+;; (add-hook! terraform-mode
+;;            (lsp)
+;;            (lsp-mode 1))
 #+end_src
 
+#+RESULTS:
+
+** rust
+
+#+begin_src elisp
+(use-package! yasnippet
+  :hook ((lsp-mode . yas-minor-mode)))
+
+;; (rustic-cargo-current-test)
+
+(add-hook! rustic-mode
+  (lsp)
+  (lsp-mode 1)
+  (yas-minor-mode 1)
+  (read-only-mode 0)
+  :local
+  (kev-setq-local
+   lsp-rust-analyzer-display-lifetime-elision-hints-enable "always"
+        lsp-rust-analyzer-display-lifetime-elision-hints-use-parameter-names t
+        lsp-headerline-breadcrumb-enable nil
+        lsp-ui-sideline-enable t
+        lsp-ui-sideline-show-code-actions t
+        lsp-ui-sideline-show-diagnostics t
+        lsp-ui-sideline-show-hover t
+        lsp-signature-auto-activate t
+        lsp-signature-render-documentation t
+        lsp-ui-doc-enable nil
+        lsp-ui-doc-show-with-cursor nil
+        lsp-ui-doc-position 'at-point
+
+        lsp-completion-show-detail t
+        lsp-completion-show-kind t
+        rustic-default-test-arguments "--benches --tests --all-features --nocapture")
+
+  ;; TODO make local to rust mode
+  (map! :map lsp-command-map
+        "t"  #'lsp-rust-analyzer-related-tests
+        "dd" #'lsp-rust-analyzer-open-external-docs))
+#+end_src
+
+#+RESULTS:
 
 ** Lisp
 
@@ -744,7 +811,7 @@ update: should really just use emacs' lsp-mode for this
 
 #+end_src
 
-for skewer
+for skewer, like a repl type thing for js
 
 #+begin_src elisp
 
@@ -819,13 +886,12 @@ nice keybindings
 
         clojure-toplevel-inside-comment-form t
         ;; code alignment
-        clojure-align-forms-automatically t
-        )
+        clojure-align-forms-automatically t)
 
 
   (defun kev-format-buffer ()
-      (interactive)
-      (save-excursion
+    (interactive)
+    (save-excursion
         (lsp-format-buffer)
         (clojure-align (point-min) (point-max))))
 
@@ -833,9 +899,7 @@ nice keybindings
     (into 1)
     (do-template 2)
     (sc.api/letsc 1)
-    (macrolet '(1 ((:defn)) nil))))
-
-(add-hook! clojure-mode
+    (macrolet '(1 ((:defn)) nil)))
   )
 
 (define-advice aggressive-indent--indent-if-changed (:around (orig-fun buffer) aggressive-indent-advice)
@@ -1017,19 +1081,21 @@ cider configs
 for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#indentation-of-macro-forms][clojure mode docs]] and at [[https://docs.cider.mx/cider/indent_spec.html][cider docs]]
 
 #+begin_src elisp
-(use-package! lsp-ui
-  :commands lsp-ui-mode)
 
+(add-hook! lsp
+  (lsp-ui-mode 1)
+  ;; I don't think these are required?
+;; (evil-set-command-property 'evil-ex-search-next :jump nil)
+;; (evil-set-command-property 'evil-ex-search-backward :jump nil)
+  )
 
 ;; really disable cider eldoc
 ;; idk if this is actually needed anymore
 ;; (define-advice cider-eldoc-setup (:around (orig-fun) cider-eldoc-advice)
 ;;   nil)
 
-(add-hook! lsp-mode
-           ;; because lsp indent is incredibly annoying for clojure
-           ;; TODO restrict to just clojure?
-           (setq indent-region-function nil))
+;; (add-hook! lsp-mode
+;;   (turn-on-better-jumper-mode))
 
 (use-package! lsp-mode
   :hook ((clojure-mode . lsp)
@@ -1039,10 +1105,10 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
          (lsp-mode . lsp-enable-which-key-integration))
   :commands lsp
   :config
-
   ;; add going back
-  (lsp-define-conditional-key lsp-command-map
-    "gb" xref-go-back "go back" t)
+  (map! :map lsp-command-map
+        "gb" #'xref-go-back
+        "d" #'lsp-ui-doc-glance)
   ;; add paths to your local installation of project mgmt tools, like lein
 
   ;; disable modeline diagnostics
@@ -1050,21 +1116,28 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
   (setq lsp-modeline-diagnostics-enable nil
         ;; focus help window when it shows up
         help-window-select t
+
+        ;; because lsp indent is incredibly annoying for clojure
+        ;; TODO restrict to just clojure?
+        indent-region-function nil
+
         ;; disable sideline thing
         lsp-clojure-custom-server-command '("zsh" "-c" "clojure-lsp") ; to locally test clojure-lsp
-        lsp-ui-sideline-enable nil
         lsp-file-watch-threshold 10000
         lsp-diagnostics-provider :none
         gc-cons-threshold (* 100 1024 1024)
         read-prcess-output-max (* 1024 1024)
         ;; disable big obnoxious window at top
-        lsp-ui-doc-enable nil
         ;; from https://www.youtube.com/watch?v=grL3DQyvneI&ab_channel=LondonClojurians
         cider-eldoc-display-for-symbol-at-point nil ;; disable cider eldoc
         cider-repl-display-help-banner nil      ;; disable help banner
         ;; no header see https://emacs-lsp.github.io/lsp-mode/tutorials/how-to-turn-off/
+
+        lsp-ui-doc-enable nil
+        lsp-ui-doc-position 'at-point
         lsp-headerline-breadcrumb-enable nil
-        )
+        lsp-ui-sideline-enable nil
+        lsp-ui-sideline-show-code-actions nil)
 
   ;; don't watch public dir either. alternatively move to /target bc that's the default
   (add-to-list 'lsp-file-watch-ignored-directories
@@ -1082,7 +1155,7 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
                clojurex-mode))
     (add-to-list 'lsp-language-id-configuration `(,m . "clojure"))))
 
-    ;; makes so aggressive indent won't go until you exit insert mode
+;; makes so aggressive indent won't go until you exit insert mode
 (define-advice aggressive-indent--indent-if-changed (:around (orig-fun buffer) aggressive-indent-advice)
   (when (not (with-current-buffer buffer
                (evil-insert-state-p)))
@@ -1091,8 +1164,7 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
 
 
 #+RESULTS:
-: nrepl-start-server-process@nrepl-start-server-process-advice
-
+: aggressive-indent--indent-if-changed@aggressive-indent-advice
 
 ** go
 #+begin_src elisp

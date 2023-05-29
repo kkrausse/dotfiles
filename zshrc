@@ -151,7 +151,7 @@ PROMPT='%{$fg[green]%}$ %{$reset_color%}'
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
 
-export PATH=$HOME/bin:$PATH
+export PATH=$HOME/.bin:$PATH
 # just to make brew have higher priority
 export PATH=/usr/local/bin:$PATH
 export PATH=~/bin/just-v0.8.3-x86_64-apple-darwin:$PATH
@@ -227,3 +227,5 @@ export SDKMAN_DIR="$HOME/.sdkman"
 
 
 source /Users/kevinkrausse/Documents/taxbit/tax-engine-tools/bash_scripts/source.sh
+export PATH="/opt/homebrew/sbin:$PATH"
+export PATH="$HOME/bin:$PATH"
