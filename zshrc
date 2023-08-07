@@ -5,6 +5,7 @@
 # Path to your oh-my-zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
 
+DISABLE_AUTO_UPDATE=true
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
@@ -111,12 +112,11 @@ source $ZSH/oh-my-zsh.sh
 ################## kevin stuff ##################################
 #################################################################
 
-
 # might be cool to use this at some point
 function c() {
 	echo "${fg[green]}  ~/$(realpath --relative-to=$HOME '.')"
 	echo "${fg[magenta]}  $(kuc) "
-	echo "  $(git_prompt_info) ${reset_color}"
+	echo "$(git_prompt_info) ${reset_color}"
 }
 
 PROMPT='%{$fg[green]%}$ %{$reset_color%}'
@@ -156,12 +156,6 @@ export PATH=$HOME/.bin:$PATH
 export PATH=/usr/local/bin:$PATH
 export PATH=~/bin/just-v0.8.3-x86_64-apple-darwin:$PATH
 
-# release email stuff
-export PATH="$HOME/bin/wp-pro-bin:$PATH"
-
-export SBT_OPTS=-Xmx4G
-export AWS_PROFILE=default
-
 # rust stuff
 export PATH="$HOME/.cargo/bin:$PATH"
 
@@ -175,6 +169,8 @@ alias jq="jq -C"
 # doom stuff
 # doom sync, etc.
 export PATH="$HOME/.emacs.d/bin:$PATH"
+# the new one is here I guess?
+export PATH="$HOME/.config/emacs/bin:$PATH"
 
 # solana cli
 # export PATH="/Users/kkrausse/.local/share/solana/install/active_release/bin:$PATH"
@@ -203,6 +199,7 @@ unset __conda_setup
 # <<< conda initialize <<<
 
 PS1=$oldprompt # fuck conda
+export PS1="%F{green}$ %f"
 
 export PATH="/usr/local/opt/ruby/bin:$PATH"
 export PATH="/usr/local/lib/ruby/gems/3.0.0/bin:$PATH"
@@ -229,3 +226,4 @@ export SDKMAN_DIR="$HOME/.sdkman"
 source /Users/kevinkrausse/Documents/taxbit/tax-engine-tools/bash_scripts/source.sh
 export PATH="/opt/homebrew/sbin:$PATH"
 export PATH="$HOME/bin:$PATH"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
