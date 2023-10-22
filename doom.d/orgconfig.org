@@ -382,21 +382,19 @@ in `input' to get back edits made by the model"
 ;; evil-beginning-of-line
 ;; newline-and-indent
 ;; evil-next-line
+;; FIXME the problem is that the value of end-point is no longer valid because (indent-according-to-mode) changes the buffer!
 (defun kev-indent (beg end)
   "indents highlighted."
   (interactive "r")
-  (let ((end-point (save-excursion
-                    (goto-char end)
-                    (evil-end-of-line)
-                    (point))))
-    (save-excursion
+  (save-excursion
+    (let ((end-line (line-number-at-pos (- end 1))))
       (goto-char beg)
       (indent-according-to-mode)
       ;; such as a way to do the last line, but never try to go past it
-      (while (< (point) end-point)
+      (while (< (line-number-at-pos)
+                end-line)
         (evil-next-line)
-        (indent-according-to-mode)
-        (evil-end-of-line)))))
+        (indent-according-to-mode)))))
 
 (defun projectile-term ()
   "if terminal exists in project, switch to it. else, create at project root"
@@ -789,9 +787,13 @@ disable doc checkers
 ** JavaScript n TypeScript
 
 #+begin_src elisp
+;; lsp uses typescript-language-server
+;; with npm i -g typescript-language-server
 (add-hook! typescript-mode
-           (lsp)
-           (lsp-mode 1))
+  (lsp)
+  (lsp-mode 1)
+
+  (setq typescript-indent-level 2))
 #+end_src
 
 #+RESULTS:
@@ -840,6 +842,8 @@ nice keybindings
 #+begin_src elisp
 (defvar kevin-clojure-playbook
   '("((requiring-resolve 'dev/reset))"
+    "(do (require 'portal.api) (portal.api/open) (add-tap #'portal.api/submit))"
+    "((requiring-resolve 'clojure.repl.deps/sync-deps) :aliases [:test :dev :local-dev])"
     "((requiring-resolve 'vlaaad.reveal/inspect) *1)"
     "(doseq [_ (range 20)] (prn (tap> nil)))"
     "((requiring-resolve 'vlaaad.reveal/tap-log) :close-difficulty :easy)"
@@ -1111,6 +1115,7 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
         "d" #'lsp-ui-doc-glance)
   ;; add paths to your local installation of project mgmt tools, like lein
 
+  (lsp-diagnostics-mode 0)
   ;; disable modeline diagnostics
   ;; this takes a long time on a screen rerender. Plus I never use
   (setq lsp-modeline-diagnostics-enable nil
@@ -1124,7 +1129,7 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
         ;; disable sideline thing
         lsp-clojure-custom-server-command '("zsh" "-c" "clojure-lsp") ; to locally test clojure-lsp
         lsp-file-watch-threshold 10000
-        lsp-diagnostics-provider :none
+        lsp-diagnostics-provider :auto
         gc-cons-threshold (* 100 1024 1024)
         read-prcess-output-max (* 1024 1024)
         ;; disable big obnoxious window at top
