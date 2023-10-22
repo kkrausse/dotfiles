@@ -9,7 +9,10 @@ to install
 
 - brew
 - oh my zsh
-- emacs https://github.com/d12frosted/homebrew-emacs-plus#install
+- emacs
+  =brew tap d12frosted/emacs-plus=
+  =brew install emacs-plus@28 --with-native-comp --with-ctags=
+  https://github.com/d12frosted/homebrew-emacs-plus#install
 - doom https://github.com/doomemacs/doomemacs#install
   - PROBLEM: texinfo is old, so maybe do this? =brew ln texinfo --force=
   - symlink doom.d first! Then run =doom sync=
@@ -31,7 +34,7 @@ ln -s $(pwd)/lsp ~/.lsp
 ln -s $(pwd)/clj-kondo ~/.clj-kondo
 ln -s $(pwd)/bin ~/.bin
 ln -s $(pwd)/vimrc ~/.vimrc
-ln -s $(pwd)/clojure/deps.edn ~/.clojure/deps.edn
+ln -s $(pwd)/clojure ~/.clojure
 #+end_src
 
 vim vinegar
@@ -42,6 +45,18 @@ git clone https://github.com/tpope/vim-vinegar.git ~/.vim/pack/tpope/start/vim-v
 #+end_src
 
 
+install nvm to get node.
+
+need cmake for vterm in emacs:
+
+#+begin_src bash
+# for cmake and libtools for vterm
+brew install cmake
+brew install libtool
+# clojure
+# make sure you install sdkman and get a java version you like
+brew install clojure/tools/clojure
+#+end_src
 
 
 
