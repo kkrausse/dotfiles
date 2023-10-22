@@ -167,7 +167,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 
 # bat stuff
 export BAT_PAGER="less -RF"
-alias jq="jq -C"
+alias jqc="jq -C"
 
 # sops kms key for argo
 # export SOPS_KMS_ARN=arn:aws:kms:us-west-2:738720058982:alias/util/helm-secrets/services

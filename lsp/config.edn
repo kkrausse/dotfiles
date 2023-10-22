@@ -1,4 +1,5 @@
 {:log-path                      "/tmp/clojure-lsp.out"
+ :source-paths-ignore-regex ["tmp.*"]
  :show-docs-arity-on-same-line? true
  ;; this *was* so I could get line number from git repos with clojure, but I think I found a better way.
  ;; 
