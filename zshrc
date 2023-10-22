@@ -208,15 +208,8 @@ export PATH="/opt/homebrew/bin:$PATH"
 
 POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=""
 
-# nvm shite
-export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-
-
 ##### machine / fs specific #########
-export PATH=$PATH:/Users/kevinkrausse/Documents/taxbit/clj-utils/
-
-export PATH=$PATH:$(go env GOPATH)/bin
+# export PATH=$PATH:$(go env GOPATH)/bin
 
 #THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
 export SDKMAN_DIR="$HOME/.sdkman"
@@ -226,4 +219,7 @@ export SDKMAN_DIR="$HOME/.sdkman"
 source /Users/kevinkrausse/Documents/taxbit/tax-engine-tools/bash_scripts/source.sh
 export PATH="/opt/homebrew/sbin:$PATH"
 export PATH="$HOME/bin:$PATH"
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion

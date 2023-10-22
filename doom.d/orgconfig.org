@@ -1070,7 +1070,7 @@ cider configs
   ;; insert prefix because sdkman doesn't insert the environment in emacs automatically
   ;; idk how to set it for the current emacs shell. may not be possible
   ;; was: "source \"$HOME/.sdkman/bin/sdkman-init.sh\" && { echo \"no\n\" | sdk env || echo 'no .sdkman?' } && sdk c java && "
-  (let ((cmd-prefix "source \"$HOME/.sdkman/bin/sdkman-init.sh\" && echo \"no\\n\" | sdk c java && source $HOME/kevenv.sh && echo $AWS_ACCOUNT_ID && "))
+  (let ((cmd-prefix "source \"$HOME/.sdkman/bin/sdkman-init.sh\" && echo \"no\\n\" | sdk c java && "))
     (funcall orig-fun directory (concat cmd-prefix cmd) on-port-callback)))
 #+end_src
 
