@@ -9,9 +9,10 @@ to install
 
 - brew
 - oh my zsh
+  - AFTER this, delete zshrc, and relink the one here
 - emacs
   =brew tap d12frosted/emacs-plus=
-  =brew install emacs-plus@28 --with-native-comp --with-ctags=
+  =brew install emacs-plus@28 --with-native-comp --with-ctags --with-xwidgets=
   https://github.com/d12frosted/homebrew-emacs-plus#install
 - doom https://github.com/doomemacs/doomemacs#install
   - PROBLEM: texinfo is old, so maybe do this? =brew ln texinfo --force=
@@ -27,6 +28,7 @@ to install
 symlinks (run from project root)
 
 #+begin_src bash
+cd dotfiles
 ln -s $(pwd)/doom.d/ ~/.doom.d
 ln -s $(pwd)/zshrc ~/.zshrc
 ln -s $(pwd)/gitconfig ~/.gitconfig
