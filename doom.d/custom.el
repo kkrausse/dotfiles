@@ -4,11 +4,13 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(groovy-indent-offset 2)
- '(org-roam-db-autosync-mode t t)
+ '(org-roam-db-autosync-mode t)
  '(org-src-window-setup 'current-window)
  '(projectile-sort-order 'recentf)
  '(safe-local-variable-values
-   '((elisp-lint-indent-specs
+   '((cider-jack-in-cmd . "clojure -M:test:local-dev")
+     (cider-jack-in-cmd . "clojure -M:local-dev")
+     (elisp-lint-indent-specs
       (if-let* . 2)
       (when-let* . 1)
       (let* . defun)

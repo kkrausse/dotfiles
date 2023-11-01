@@ -6,13 +6,33 @@
              }
              ;; "ekata-snapshot" {:url "https://artifactory.util.pages/artifactory/libs-snapshot-local"}
  :aliases   {:local-dev
-             {:extra-deps {
+
+             {
+              ;; :extra-paths ["/Users/kevinkrausse/Documents/repos/clojure/src/clj" "/Users/kevinkrausse/Documents/repos/tools.deps/src/main/clojure"]
+              :extra-deps {
                            ;org.clojure/clojure {:mvn/version "1.10.2"}
                            ;com.taxbit/tax-engine-core {:mvn/version "1.1.174"}
                            ;; local dev version I have symlinked to ~/Documents/me/kev-nrepl
                            #_#_                                     kevonavin/kev-repl {:git/url "https://github.com/kevonavin/kev-nrepl.git"
                                                                                         :sha     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
 
+                           org.clojure/clojure                   {:mvn/version "1.12.0-alpha3"}
+                           ;;;;;;;;;;;;;; local stuff ;;;;;;;;;;;;;;;;;;;;;;;
+
+                           ;; just added source paths here
+                           ;; maybe should just put in extra-paths, but say it deprecated?
+                           ;; put ini clj-utils even? and then have only one weird dep here?
+                           ;;
+                           ;; git submodules for clojure repos under dotfiles
+                           ;;
+                           ;; interferes with clojure readers somehow?
+                           ;;
+                           ;; z ensures it is later on the classpath
+                           ;; I guess this at least puts it on clojure-lsp's radar
+                           zkev.local/clojure-src {:local/root "/Users/kevinkrausse/Documents/repos"}
+                           kev/util {:local/root "/Users/kevinkrausse/Documents/taxbit/clj-utils"}
+
+                           ;;;;;;;;;;;;;; end local stuff ;;;;;;;;;;;;;;;;;;;;;;;
                            org.clojure/core.async {:git/url "https://github.com/clojure/core.async"
                                                    :sha "ad5c0475346a0ef36e6a8623cc1d3c1b6439ef96"}
                            lambdaisland/deep-diff2                  {:mvn/version "2.0.108"}
@@ -28,10 +48,11 @@
                            vvvvalvalval/scope-capture               {:mvn/version "0.3.2"}
                            pjstadig/humane-test-output              {:mvn/version "0.11.0"}
                            ;; async profiler!
-                           com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.0.3"}
+                           com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.1.1"}
                            ;;#_#_
                            lambdaisland/classpath                   {:git/url "https://github.com/lambdaisland/classpath"
                                                                      :sha     "a0142d5ac2b1a390201fb8db245df7cacac692f2"}
+                           djblue/portal {:mvn/version "0.42.0"}
                            ;; this needs to be commented out sometimes because it overrides an aws transient
                            ;; dep for vilhelmina that fucks everything up
                            ;;org.clojure/tools.deps.alpha {:mvn/version "0.12.1030"}
