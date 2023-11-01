@@ -22,6 +22,9 @@
 ;  :recipe (:host github :repo "username/repo"
 ;           :files ("some-file.el" "src/lisp/*.el")))
 
+;; NOTE: use :pin nil to unpin a package, then you have to call doom upgrade
+;;
+;;
 ;; micorsoft's lsp for python
 (package! lsp-pyright)
 
@@ -47,7 +50,14 @@
 ;; override those in the clojure doom module
 ;; pinning these have fucked me before
 ;;  switch add `:pin nil' if ya want
-(package! clojure-mode)
+;; (package! clojure-mode :disable 1)
+
+(package! clojure-mode
+  :pin nil
+  :recipe (:host github
+           :repo "clojure-emacs/clojure-mode"
+           :branch "master"))
+
 (package! cider)
 
 (package! exec-path-from-shell

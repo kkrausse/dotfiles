@@ -1000,6 +1000,7 @@ cider configs
                                    ))
 
 
+(put 'cider-custom-cljs-repl-init-form 'safe-local-variable 'identity)
 (use-package! cider
   ;; for some reason, this works. But after! doesn't work.
   ;; neither does `:hook (clojure-mode . cider-mode)`. Both cause the doom module
@@ -1025,41 +1026,25 @@ cider configs
   ;; version and got rid of =cider-clojure-cli-parameters=
   (setq cider-jack-in-dependencies nil)
   (setq cider-jack-in-auto-inject-clojure nil)
-  (define-advice cider-jack-in-params (:around (orig-fun project-type) jack-in-param-advice)
-    (pcase project-type
-      ('clojure-cli (ivy-read "clojure cli params: "
-                              kev-clojure-cli-param-hist
-                              :history 'kev-clojure-cli-param-hist))
-      (_ (funcall orig-fun project-type)))))
+  (setq cider-inject-dependencies-at-jack-in t)
+)
 
+  ;; NOTE: instead set cider-jack-in-cmd with .dir-locals.el !!!
+  ;; see how ppl do it:
+  ;; https://github.com/djblue/portal/blob/48bda9b9b59795802a18f301d982b1f41d0db3c6/.dir-locals.el#L1
+  ;;
 
-
-;; note, that with the advice, I disable it for clojure-cli
-(setq cider-inject-dependencies-at-jack-in t)
-
-(define-advice cider-inject-jack-in-dependencies (:around (orig-fun global-opts params project-type)
-                                                          inject-deps-advice)
-  (pcase project-type
-    ('clojure-cli params)
-    (_ (funcall orig-fun global-opts params project-type))))
-
-;; so fucking stupid how they segregate into sesman sessions
-;; This undoes that so any repl started from emacs is a candidate
-;; This would break the switching repls workflow of like checking out a different
-;; git branch and doing stuff, but I never do that.
-;; ideally, you could just merge two sesman sessions somehow?
-;; that might be better actually
-(define-advice cider-repls (:around (orig-fun &optional type ensure) cider-repls-advice)
-  ;;  (let ((type (cond
-  ;;               ((listp type)
-  ;;                (mapcar #'cider-maybe-intern type))
-  ;;               ((cider-maybe-intern type))))
-  ;;        (repls (seq-mapcat #'cdr
-  ;;                           (sesman--linked-sessions 'CIDER 'sort))))
-  ;;    (seq-filter (lambda (b)
-  ;;                  (cider--match-repl-type type b))
-  ;;                repls))
-  (funcall orig-fun type ensure))
+  ;; (define-advice cider-jack-in-params (:around (orig-fun project-type) jack-in-param-advice)
+  ;;   (pcase project-type
+  ;;     ('clojure-cli (ivy-read "clojure cli params: "
+  ;;                             kev-clojure-cli-param-hist
+  ;;                             :history 'kev-clojure-cli-param-hist))
+  ;;     (_ (funcall orig-fun project-type))))
+;; (define-advice cider-inject-jack-in-dependencies (:around (orig-fun global-opts params project-type &optional command)
+;;                                                           inject-deps-advice)
+;;   (pcase project-type
+;;     ('clojure-cli params)
+;;     (_ (funcall orig-fun global-opts params project-type command))))
 
 ;; cider window popup!
 ;;
@@ -1074,12 +1059,12 @@ cider configs
   ;; insert prefix because sdkman doesn't insert the environment in emacs automatically
   ;; idk how to set it for the current emacs shell. may not be possible
   ;; was: "source \"$HOME/.sdkman/bin/sdkman-init.sh\" && { echo \"no\n\" | sdk env || echo 'no .sdkman?' } && sdk c java && "
-  (let ((cmd-prefix "source \"$HOME/.sdkman/bin/sdkman-init.sh\" && echo \"no\\n\" | sdk c java && source $HOME/kevenv.sh && echo $AWS_ACCOUNT_ID && "))
+  (let ((cmd-prefix "source \"$HOME/.sdkman/bin/sdkman-init.sh\" && echo \"no\\n\" | sdk c java && "))
     (funcall orig-fun directory (concat cmd-prefix cmd) on-port-callback)))
 #+end_src
 
 #+RESULTS:
-: lsp-clojure-nrepl-connect
+: nrepl-start-server-process@nrepl-start-server-process-advice
 
 ** lsp
 for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#indentation-of-macro-forms][clojure mode docs]] and at [[https://docs.cider.mx/cider/indent_spec.html][cider docs]]
