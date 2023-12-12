@@ -219,6 +219,8 @@ export SDKMAN_DIR="$HOME/.sdkman"
 source /Users/kevinkrausse/Documents/taxbit/tax-engine-tools/bash_scripts/source.sh
 export PATH="/opt/homebrew/sbin:$PATH"
 export PATH="$HOME/bin:$PATH"
+# idk why my python shit wasn't on there?
+export PATH="$(python3 -m site --user-base)/bin:$PATH"
 
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm

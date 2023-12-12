@@ -1071,12 +1071,33 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
 
 #+begin_src elisp
 
-(add-hook! lsp
-  (lsp-ui-mode 1)
-  ;; I don't think these are required?
-;; (evil-set-command-property 'evil-ex-search-next :jump nil)
-;; (evil-set-command-property 'evil-ex-search-backward :jump nil)
-  )
+(add-hook! 'lsp-mode-hook
+
+           (lsp-ui-mode 1)
+           ;; I don't think these are required?
+           ;; (evil-set-command-property 'evil-ex-search-next :jump nil)
+           ;; (evil-set-command-property 'evil-ex-search-backward :jump nil)
+           (map! :map lsp-command-map
+                 "gb" #'xref-go-back
+                 "d" #'lsp-ui-doc-glance)
+
+           (setq lsp-ui-doc-position 'at-point
+                 lsp-enable-symbol-highlighting 't
+
+                 ;; perf stuff
+                 lsp-file-watch-threshold 10000
+                 gc-cons-threshold (* 100 1024 1024)
+                 read-prcess-output-max (* 1024 1024)
+                 lsp-ui-doc-enable nil
+                 lsp-ui-doc-position 'at-point
+                 lsp-headerline-breadcrumb-enable nil
+                 lsp-ui-sideline-enable nil
+                 lsp-ui-sideline-show-code-actions nil
+
+                 )
+
+           (map! "s-l" lsp-command-map)
+           )
 
 ;; really disable cider eldoc
 ;; idk if this is actually needed anymore
@@ -1086,6 +1107,8 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
 ;; (add-hook! lsp-mode
 ;;   (turn-on-better-jumper-mode))
 
+
+;; TODO this is ignored bc of doom lsp module FIXME
 (use-package! lsp-mode
   :hook ((clojure-mode . lsp)
          (clojurec-mode . lsp)
@@ -1113,8 +1136,8 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
 
         ;; disable sideline thing
         lsp-clojure-custom-server-command '("zsh" "-c" "clojure-lsp") ; to locally test clojure-lsp
-        lsp-file-watch-threshold 10000
         lsp-diagnostics-provider :auto
+        lsp-file-watch-threshold 10000
         gc-cons-threshold (* 100 1024 1024)
         read-prcess-output-max (* 1024 1024)
         ;; disable big obnoxious window at top
@@ -1127,7 +1150,8 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
         lsp-ui-doc-position 'at-point
         lsp-headerline-breadcrumb-enable nil
         lsp-ui-sideline-enable nil
-        lsp-ui-sideline-show-code-actions nil)
+        lsp-ui-sideline-show-code-actions nil
+        )
 
   ;; don't watch public dir either. alternatively move to /target bc that's the default
   (add-to-list 'lsp-file-watch-ignored-directories

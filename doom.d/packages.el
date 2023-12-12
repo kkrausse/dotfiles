@@ -44,8 +44,8 @@
 
 ;; fixing this to use newer github stuff
 ;; it seems they keep this up to date in melpa?
-(package! lsp-mode)
-(package! lsp-ui)
+;; (package! lsp-mode)
+;; (package! lsp-ui)
 
 ;; override those in the clojure doom module
 ;; pinning these have fucked me before
