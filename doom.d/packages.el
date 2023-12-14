@@ -52,19 +52,15 @@
 ;;  switch add `:pin nil' if ya want
 ;; (package! clojure-mode :disable 1)
 
-(package! clojure-mode
-  :pin nil
-  :recipe (:host github
-           :repo "clojure-emacs/clojure-mode"
-           :branch "master"))
-
-(package! cider)
-
 (package! exec-path-from-shell
   :recipe (:host github
            :repo "purcell/exec-path-from-shell"
            :branch "master"))
 
+(package! ellama
+  :recipe (:host github
+           :repo "s-kostyaev/ellama"
+           :branch "main"))
 
 (package! restclient
   :recipe (:host github
@@ -77,10 +73,10 @@
            :repo "rmuslimov/browse-at-remote"
            :branch "master"))
 
-(package! company
-  :recipe (:host github
-           :repo "company-mode/company-mode"
-           :branch "master"))
+;; (package! company
+;;   :recipe (:host github
+;;            :repo "company-mode/company-mode"
+;;            :branch "master"))
 
 (package! org-roam
   :recipe (:host github

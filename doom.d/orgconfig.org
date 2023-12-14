@@ -7,6 +7,22 @@ this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_chann
 (load "~/.doom.d/machine-specific.el")
 #+end_src
 
+* one offs
+** ellama
+#+begin_src elisp
+;; NOTE will eval NOW if package already loaded
+(after! ellama
+  (setq
+   ellama-provider (make-llm-ollama
+                    :scheme "http"
+                    :host "10.0.1.3"
+                    :port 11434
+                    :chat-model "zephyr"
+                    :embedding-model "zephyr")))
+#+end_src
+
+#+RESULTS:
+: #s(llm-ollama "http" "10.0.1.3" 11434 "zephyr" "zephyr")
 
 * emacs setup / utils
 
