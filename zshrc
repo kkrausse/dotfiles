@@ -1,9 +1,10 @@
 
 # If you come from bash you might have to change your $PATH.
-# export PATH=$HOME/bin:/usr/local/bin:$PATH
+export PATH=$HOME/bin:/usr/local/bin:$PATH
 
+eval "$(mcfly init zsh)"
 # Path to your oh-my-zsh installation.
-export ZSH="$HOME/.oh-my-zsh"
+#export ZSH="$HOME/.oh-my-zsh"
 
 DISABLE_AUTO_UPDATE=true
 # Set name of the theme to load --- if set to "random", it will
@@ -74,7 +75,7 @@ ZSH_THEME=""
 # Add wisely, as too many plugins slow down shell startup.
 plugins=""
 
-source $ZSH/oh-my-zsh.sh
+#source $ZSH/oh-my-zsh.sh
 
 # User configuration
 
@@ -112,15 +113,6 @@ source $ZSH/oh-my-zsh.sh
 ################## kevin stuff ##################################
 #################################################################
 
-# might be cool to use this at some point
-function c() {
-	echo "${fg[green]}  ~/$(realpath --relative-to=$HOME '.')"
-	echo "${fg[magenta]}  $(kuc) "
-	echo "$(git_prompt_info) ${reset_color}"
-}
-
-PROMPT='%{$fg[green]%}$ %{$reset_color%}'
-
 # ZSH_THEME_GIT_PROMPT_PREFIX="${fg[red]}"
 # ZSH_THEME_GIT_PROMPT_SUFFIX=""
 
@@ -152,8 +144,6 @@ PROMPT='%{$fg[green]%}$ %{$reset_color%}'
 
 
 export PATH=$HOME/.bin:$PATH
-# just to make brew have higher priority
-export PATH=/usr/local/bin:$PATH
 export PATH=~/bin/just-v0.8.3-x86_64-apple-darwin:$PATH
 
 # rust stuff
@@ -215,10 +205,7 @@ POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=""
 export SDKMAN_DIR="$HOME/.sdkman"
 [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
 
-
-source /Users/kevinkrausse/Documents/taxbit/tax-engine-tools/bash_scripts/source.sh
 export PATH="/opt/homebrew/sbin:$PATH"
-export PATH="$HOME/bin:$PATH"
 # idk why my python shit wasn't on there?
 export PATH="$(python3 -m site --user-base)/bin:$PATH"
 
