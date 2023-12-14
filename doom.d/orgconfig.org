@@ -612,13 +612,22 @@ eval thing
   (setq org-startup-folded 't)
 ;; code blocks font
   (setq org-src-fontify-natively t)
-  (setq org-src-tab-acts-natively t)
-  )
+  (setq org-src-tab-acts-natively t))
 
-(map! :mode org-mode
-      :localleader
-      "'"  #'org-edit-special
-      "g b" #'org-mark-ring-goto)
+(add-hook! 'org-mode-hook
+           :append
+  ;; (map! :map org-mode-map
+  ;;       "C-k" #'evil-previous-visual-line
+  ;;       "C-j" #'evil-next-visual-line
+  ;;       )
+  (map! :map evil-org-mode-map
+        :m "C-k" #'evil-previous-visual-line
+        :m "C-j" #'evil-next-visual-line
+        :m "gj" #'evil-next-visual-line
+        :m "gk" #'evil-previous-visual-line
+        :localleader
+        "'"  #'org-edit-special
+        (:prefix "g" "b" #'org-mark-ring-goto)))
 #+end_src
 
 #+RESULTS:

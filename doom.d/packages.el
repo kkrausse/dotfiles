@@ -82,8 +82,6 @@
            :repo "company-mode/company-mode"
            :branch "master"))
 
-(package! org-mode)
-
 (package! org-roam
   :recipe (:host github
            :repo "org-roam/org-roam"
