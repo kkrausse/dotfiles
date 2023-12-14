@@ -1,5 +1,5 @@
 (add-hook! projectile-mode
-;;  (add-to-list 'projectile-project-search-path '("~/Documents/ekata/" . 2))
+ (add-to-list 'projectile-project-search-path '("~/Documents/" . 3))
 ;;  (add-to-list 'projectile-project-search-path '("~/Documents/me/" . 2))
   )
 
