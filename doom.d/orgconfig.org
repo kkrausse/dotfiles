@@ -31,7 +31,8 @@ use =company-mode= everywhere
       company-dabbrev-ignore-case 'keep-prefix
       company-dabbrev-other-buffers t
 
-      display-buffer-base-action '((display-buffer-reuse-window display-buffer-use-least-recent-window)))
+      ;; display-buffer-reuse-window was disabled. But I think they updated the default
+      display-buffer-base-action '(nil . nil))
 
 (progn company-dabbrev-minimum-length)
 ;; I don't want tab to cycle
