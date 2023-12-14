@@ -840,32 +840,23 @@ for skewer, like a repl type thing for js
 nice keybindings
 
 #+begin_src elisp
-(defvar kevin-clojure-playbook
-  '("((requiring-resolve 'dev/reset))"
-    "(do (require 'portal.api) (portal.api/open) (add-tap #'portal.api/submit))"
-    "((requiring-resolve 'clojure.repl.deps/sync-deps) :aliases [:test :dev :local-dev])"
-    "((requiring-resolve 'vlaaad.reveal/inspect) *1)"
-    "(doseq [_ (range 20)] (prn (tap> nil)))"
-    "((requiring-resolve 'vlaaad.reveal/tap-log) :close-difficulty :easy)"
-    "((requiring-resolve 'pjstadig.humane-test-output/activate!))"
-    "((requiring-resolve 'lambdaisland.classpath/update-classpath!) {:aliases [:test :dev :local-dev]})"
-    "(tap> {:vlaaad.reveal/command '(defaction ::intern-as-x [x]
-                                   #(intern 'user 'x x))})"
-    "(set! *warn-on-reflection* true)"))
+(setq kevin-clojure-playbook
+  '(("portal" . "(do (require 'portal.api) (portal.api/open) (add-tap #'portal.api/submit))")
+    ("sync deps" . "((requiring-resolve 'clojure.repl.deps/sync-deps) :aliases [:test :dev :local-dev])")
+    ("prn space" . "(doseq [_ (range 40)] (prn \"\"))")
+    ("humane test output" . "((requiring-resolve 'pjstadig.humane-test-output/activate!))")
+    ("warn on reflection" . "(set! *warn-on-reflection* true)")))
 
 (defun kevin-clojure-playbook (&optional output-to-current-buffer)
   "evaluate something from the playbook (w/ cider)"
   (interactive "P")
-
   (let ((cmd (ivy-read "clj cmd: "
                        kevin-clojure-playbook
                        :history 'kevin-clojure-playbook)))
-    (cider-interactive-eval cmd
+    (cider-interactive-eval (cdr (assoc cmd kevin-clojure-playbook))
                             nil
                             (cider-defun-at-point 'bounds)
                             (cider--nrepl-pr-request-map))))
-
-
 
 (defun kev-format-form (beg end)
   (interactive (if (use-region-p)
@@ -890,7 +881,11 @@ nice keybindings
 
         clojure-toplevel-inside-comment-form t
         ;; code alignment
-        clojure-align-forms-automatically t)
+        clojure-align-forms-automatically t
+
+        ;; because lsp indent is incredibly annoying for clojure
+        indent-region-function nil
+)
 
 
   (defun kev-format-buffer ()
@@ -941,6 +936,7 @@ nice keybindings
                                              "(clojure.test/test-vars [\n"
                                              (cider-defun-at-point)
                                              "])"
+                                             "(prn @clojure.test/*report-counters*)"
                                              "@clojure.test/*report-counters*)")
                                      nil
                                      (cider-defun-at-point 'bounds)
@@ -1106,10 +1102,6 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
   (setq lsp-modeline-diagnostics-enable nil
         ;; focus help window when it shows up
         help-window-select t
-
-        ;; because lsp indent is incredibly annoying for clojure
-        ;; TODO restrict to just clojure?
-        indent-region-function nil
 
         ;; disable sideline thing
         lsp-clojure-custom-server-command '("zsh" "-c" "clojure-lsp") ; to locally test clojure-lsp
