@@ -63,6 +63,11 @@ export PATH="/opt/homebrew/sbin:$PATH"
 # idk why my python shit wasn't on there?
 export PATH="$(python3 -m site --user-base)/bin:$PATH"
 
+# go stuff
+if command -v go >/dev/null 2>&1; then
+	export PATH="$(go env GOPATH)/bin:$PATH";
+fi
+
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
