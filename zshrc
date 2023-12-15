@@ -1,7 +1,9 @@
 
 # If you come from bash you might have to change your $PATH.
-export PATH=$HOME/bin:/usr/local/bin:$PATH
+export PATH="$HOME/bin:/usr/local/bin:$PATH"
 
+# brew path, needed before fzf zsh plugin
+export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
 
 # deletes older command if there's a newer duplicate
 export HIST_IGNORE_ALL_DUPS=1
@@ -15,12 +17,10 @@ HISTFILE=$HOME/.zsh_history
 
 ## fzf history plugin
 export ZSH_FZF_HISTORY_SEARCH_EVENT_NUMBERS=0
-export ZSH_FZF_HISTORY_SEARCH_DATES_IN_SEARCH=0
+export ZSH_FZF_HISTORY_SEARCH_DATES_IN_SEARCH=1
 export ZSH_FZF_HISTORY_SEARCH_REMOVE_DUPLICATES=1
 export ZSH_FZF_HISTORY_SEARCH_BIND='^r'
 source ~/.zsh/plugins/zsh-fzf-history-search/zsh-fzf-history-search.plugin.zsh
-# source ~/.zsh/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh
-# bindkey '^[[A' mcfly-history-widget # doesn't work, or does initially but resets
 
 # Preferred editor for local and remote sessions
 # if [[ -n $SSH_CONNECTION ]]; then
@@ -45,28 +45,34 @@ export PATH="/usr/local/opt/texinfo/bin:$PATH"
 
 export PS1="%F{green}$ %f"
 
-export PATH="/usr/local/opt/ruby/bin:$PATH"
-export PATH="/usr/local/lib/ruby/gems/3.0.0/bin:$PATH"
+#idk if this needed
+# export PATH="/usr/local/opt/ruby/bin:$PATH"
+# export PATH="/usr/local/lib/ruby/gems/3.0.0/bin:$PATH"
 export PATH="/opt/homebrew/opt/texinfo/bin:$PATH"
-export PATH="/opt/homebrew/bin:$PATH"
-
-POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=""
 
 ##### machine / fs specific #########
-# export PATH=$PATH:$(go env GOPATH)/bin
 
 #THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
 export SDKMAN_DIR="$HOME/.sdkman"
 [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
 
-export PATH="/opt/homebrew/sbin:$PATH"
-# idk why my python shit wasn't on there?
-export PATH="$(python3 -m site --user-base)/bin:$PATH"
+
+function run_if_command_exists {
+    local command_to_check="$1"
+    shift
+    if command -v "$command_to_check" >/dev/null 2>&1; then
+        "$@"
+    else
+        echo "Command not found: $command_to_check"
+    fi
+}
 
 # go stuff
-if command -v go >/dev/null 2>&1; then
-	export PATH="$(go env GOPATH)/bin:$PATH";
-fi
+run_if_command_exists go \
+  export PATH="$(go env GOPATH)/bin:$PATH";
+
+run_if_command_exists python3 \
+  export PATH="$(python3 -m site --user-base)/bin:$PATH"
 
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
