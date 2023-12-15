@@ -2,23 +2,22 @@
 # If you come from bash you might have to change your $PATH.
 export PATH=$HOME/bin:/usr/local/bin:$PATH
 
-export MCFLY_KEY_SCHEME=vim
-export MCFLY_FUZZY=2
-export MCFLY_RESULTS=60
-export MCFLY_INTERFACE_VIEW=BOTTOM
-#eval "$(mcfly init zsh)"
-
-bindkey '^s' mcfly-history-widget
 
 # deletes older command if there's a newer duplicate
 export HIST_IGNORE_ALL_DUPS=1
-# saves newer version
+# save more history so fzf returns more shit
 export SAVEHIST=5000
 export HISTSIZE=6000
+# immediately add to history, save immediately. help w/ vterm saving hist
+setopt INC_APPEND_HISTORY SHARE_HISTORY
+# ensures all sessions write to this
+HISTFILE=$HOME/.zsh_history
+
+## fzf history plugin
 export ZSH_FZF_HISTORY_SEARCH_EVENT_NUMBERS=0
 export ZSH_FZF_HISTORY_SEARCH_DATES_IN_SEARCH=0
 export ZSH_FZF_HISTORY_SEARCH_REMOVE_DUPLICATES=1
-export ZSH_FZF_HISTORY_SEARCH_BIND='^h'
+export ZSH_FZF_HISTORY_SEARCH_BIND='^r'
 source ~/.zsh/plugins/zsh-fzf-history-search/zsh-fzf-history-search.plugin.zsh
 # source ~/.zsh/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh
 # bindkey '^[[A' mcfly-history-widget # doesn't work, or does initially but resets
