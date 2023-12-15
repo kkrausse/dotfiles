@@ -34,9 +34,9 @@
 ;; (package! better-jumper :disable 1)
 
 (package! dired-du)
-(package! key-chord)
 (package! doom-themes)
 ;; for "jj" chord binding to escape
+(package! key-chord)
 (package! evil-escape)
 
 ;; make it so terminal colors arent shit
@@ -83,11 +83,12 @@
            :repo "org-roam/org-roam"
 		   :files (:defaults "extensions/*")))
 
-(package! jet
-  :recipe (:type git
-           :host nil
-           :branch "master"
-           :repo "https://github.com/ericdallo/jet.el"))
+;; dont think this is needed bc of doom?
+;; (package! jet
+;;   :recipe (:type git
+;;            :host nil
+;;            :branch "master"
+;;            :repo "https://github.com/ericdallo/jet.el"))
 
 (package! org-bullets)
 

@@ -27,9 +27,12 @@ to install
 
 symlinks (run from project root)
 
-- note: zshrc I'm disabling oh_my_zsh, and just using https://github.com/cantino/mcfly for history
+- fzf: `sudo apt install fzf` or `brew install fzf`
 
 #+begin_src bash
+# for fzf history plugin
+git clone https://github.com/joshskidmore/zsh-fzf-history-search.git ~/.zsh/plugins/zsh-fzf-history-search
+
 cd dotfiles
 ln -s $(pwd)/doom.d/ ~/.doom.d
 ln -s $(pwd)/vimrc ~/.vimrc
