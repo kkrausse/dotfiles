@@ -2,11 +2,6 @@
 
 this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_channel=thoughtbot][this video]] and the [[https://github.com/hrs/dotfiles/blob/main/emacs/dot-emacs.d/configuration.org][setup he uses]].
 
-#+begin_src elisp
-;; -*- lexical-binding: t; -*-
-(load "~/.doom.d/machine-specific.el")
-#+end_src
-
 * one offs
 ** ellama
 #+begin_src elisp
@@ -26,6 +21,8 @@ this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_chann
 use =company-mode= everywhere
 
 #+begin_src elisp
+;; -*- lexical-binding: t; -*-
+(load "~/.doom.d/machine-specific.el")
 
 ;; TODO why do I need this?
 ;; something wrong with the config I think
@@ -634,12 +631,24 @@ eval thing
   (setq org-src-fontify-natively t)
   (setq org-src-tab-acts-natively t))
 
+(defun is-file-in-subdirectory (subdir)
+  "Check if the current buffer's file is in a specified SUBDIR."
+  (let ((current-file (buffer-file-name)))
+    (when current-file
+      (string-prefix-p (expand-file-name subdir)
+                       (expand-file-name current-file)))))
+
 (add-hook! 'org-mode-hook
            :append
-  ;; (map! :map org-mode-map
-  ;;       "C-k" #'evil-previous-visual-line
-  ;;       "C-j" #'evil-next-visual-line
-  ;;       )
+  ;; org roam should fix column width!
+  (after! org-roam
+    (when (is-file-in-subdirectory org-roam-directory)
+      (visual-fill-column-mode 1)
+      (after! visual-fill-column
+        (setq visual-fill-column-width 80
+              ;; idk if I like this yet
+              visual-fill-column-center-text nil))))
+
   (map! :map evil-org-mode-map
         :m "C-k" #'evil-previous-visual-line
         :m "C-j" #'evil-next-visual-line
@@ -901,7 +910,7 @@ nice keybindings
 
 (add-hook! clojure-mode
   ;;(aggressive-indent-mode) this shit so slow :(
-  (hs-minor-mode)
+  (hs-minor-mode 1)
 
   (setq cider-comment-prefix "(comment\n"
         cider-comment-continued-prefix "  "
@@ -914,7 +923,7 @@ nice keybindings
 
         ;; because lsp indent is incredibly annoying for clojure
         indent-region-function nil
-)
+        )
 
 
   (defun kev-format-buffer ()

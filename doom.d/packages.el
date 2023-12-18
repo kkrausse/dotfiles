@@ -47,6 +47,10 @@
 ;;  switch add `:pin nil' if ya want
 ;; (package! clojure-mode :disable 1)
 
+(package! visual-fill-column
+  :recipe (:host nil
+           :repo "https://codeberg.org/joostkremers/visual-fill-column"))
+
 (package! exec-path-from-shell
   :recipe (:host github
            :repo "purcell/exec-path-from-shell"
