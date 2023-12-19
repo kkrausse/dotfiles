@@ -6,7 +6,7 @@ export PATH="$HOME/bin:/usr/local/bin:$PATH"
 export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
 
 # deletes older command if there's a newer duplicate
-export HIST_IGNORE_ALL_DUPS=1
+setopt HIST_IGNORE_ALL_DUPS
 # save more history so fzf returns more shit
 export SAVEHIST=5000
 export HISTSIZE=6000

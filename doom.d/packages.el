@@ -22,11 +22,6 @@
 ;  :recipe (:host github :repo "username/repo"
 ;           :files ("some-file.el" "src/lisp/*.el")))
 
-;; NOTE: use :pin nil to unpin a package, then you have to call doom upgrade
-;;
-;;
-;; micorsoft's lsp for python
-(package! lsp-pyright)
 
 ;; fuck this thing
 (package! clj-refactor :disable 1)
