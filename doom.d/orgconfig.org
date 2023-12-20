@@ -2,23 +2,7 @@
 
 this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_channel=thoughtbot][this video]] and the [[https://github.com/hrs/dotfiles/blob/main/emacs/dot-emacs.d/configuration.org][setup he uses]].
 
-* one offs
-** ellama
-#+begin_src elisp
-;; NOTE will eval NOW if package already loaded
-(after! ellama
-  (setq
-   ellama-provider (make-llm-ollama
-                    :scheme "http"
-                    :host "10.0.1.3"
-                    :port 11434
-                    :chat-model "zephyr"
-                    :embedding-model "zephyr")))
-#+end_src
-
-* emacs setup / utils
-
-use =company-mode= everywhere
+* initial setup / utils
 
 #+begin_src elisp
 ;; -*- lexical-binding: t; -*-
@@ -144,6 +128,18 @@ and make multi-term use it
            'doom-modeline-mode)
 #+end_src
 * My Plugins
+** ellama
+#+begin_src elisp
+;; NOTE will eval NOW if package already loaded
+(after! ellama
+  (setq
+   ellama-provider (make-llm-ollama
+                    :scheme "http"
+                    :host "localhost"
+                    :port 11434
+                    :chat-model "zephyr"
+                    :embedding-model "zephyr")))
+#+end_src
 
 ** gpt
 #+begin_src elisp
