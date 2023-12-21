@@ -30,7 +30,7 @@ this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_chann
   (setq company-idle-delay 0.5)
   (company-mode-on)
   (setq company-minimum-prefix-length 1
-        company-dabbrev-minimum-length 3
+        company-dabbrev-minimum-length 2
         company-dabbrev-ignore-case 'keep-prefix
         company-dabbrev-other-buffers t)
   ;; I don't want tab to cycle
@@ -38,43 +38,29 @@ this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_chann
               "<tab>" #'company-complete)
   )
 
+;; diplay buffer stuff
 (setq display-buffer-base-action '((display-buffer-reuse-window
                                     display-buffer-same-window
                                     display-buffer-use-least-recent-window) . nil))
-
 ;; example to set alternames based on buffer name,
 ;; (setf (alist-get "\\*cider-repl.*" display-buffer-alist)
 ;;       '(display-buffer-use-least-recent-window))
 
-(progn company-dabbrev-minimum-length)
 
-#+end_src
-
-
-#+begin_src elisp
-;; -*- lexical-binding: t; -*-
+;; multi term stuff , which I don't use anymore really
 (setq multi-term-program "/bin/zsh")
 (setq-default explicit-shell-file-name "/bin/zsh")
-
-
-(use-package! exec-path-from-shell
-  :config
-  (dolist (var '("JAVA_HOME"))
-    (add-to-list 'exec-path-from-shell-variables var)))
-
-;; what is this?!
-(exec-path-from-shell-initialize)
-
-(window-prev-buffers)
-
-;; omg finding this was such a pain in the ass
-;; I need to use the debugger better! Just one single good debug
-;; was what finally got the issue. I could have done it like 3 hours ago
 (setq multi-term-switch-after-close nil)
-#+end_src
 
-#+RESULTS:
-: kev-list-packages
+
+;; I think needed for env vars in the shell?
+;; might actuall not be
+(use-package! exec-path-from-shell :defer t)
+(after! exec-path-from-shell
+  (dolist (var '("JAVA_HOME"))
+    (add-to-list 'exec-path-from-shell-variables var))
+  (exec-path-from-shell-initialize))
+#+end_src
 
 * UI preferences
 ** Theme
@@ -112,9 +98,6 @@ doom-modeline package for [[https://github.com/seagle0128/doom-modeline][dopenes
     '(bar window-number matches buffer-info remote-host buffer-position word-count parrot selection-info)
     '(persp-name grip irc mu4e gnus debug repl minor-modes input-method indent-info process vcs)))
 #+end_src
-
-#+RESULTS:
-: #s(hash-table size 65 test eql rehash-size 1.5 rehash-threshold 0.8125 data (:use-package (25147 28244 234007 0) :init (25147 28244 234002 0) :config (25147 28244 233990 0) :config-secs (0 0 215 0) :init-secs (0 0 1768 0) :use-package-secs (0 0 1774 0)))
 
 and make multi-term use it
 
@@ -604,10 +587,7 @@ line numbers
 #+end_src
 
 * Org Mode
-** setup
-
-eval thing
-
+** org
 #+begin_src elisp
 (after! org
   (define-key org-mode-map (kbd "C-c f") #'org-babel-execute-src-block)
@@ -629,17 +609,8 @@ eval thing
       (string-prefix-p (expand-file-name subdir)
                        (expand-file-name current-file)))))
 
-(add-hook! 'org-mode-hook
-           :append
-  ;; org roam should fix column width!
-  (after! org-roam
-    (when (is-file-in-subdirectory org-roam-directory)
-      (visual-fill-column-mode 1)
-      (after! visual-fill-column
-        (setq visual-fill-column-width 80
-              ;; idk if I like this yet
-              visual-fill-column-center-text nil))))
-
+;; general org settings
+(after! org
   (map! :map evil-org-mode-map
         :m "C-k" #'evil-previous-visual-line
         :m "C-j" #'evil-next-visual-line
@@ -648,38 +619,29 @@ eval thing
         :localleader
         "'"  #'org-edit-special
         (:prefix "g" "b" #'org-mark-ring-goto)))
+
+(add-hook! 'org-mode-hook :append
+           ;; org roam should fix column width!
+  (after! org-roam
+    (when (is-file-in-subdirectory org-roam-directory)
+      (visual-fill-column-mode 1)
+      (after! visual-fill-column
+        (setq visual-fill-column-width 80
+              ;; idk if I like this yet
+              visual-fill-column-center-text nil))))
+  )
+
+;; I like to see an outline of pretty bullets instead of a list of asterisks.
+;; (use-package! org-bullets-mode
+;;   :hook org-mode)
 #+end_src
 
-#+RESULTS:
-
-
-TODO archive
+wat?
 
 #+begin_src elisp
-(defun kevin/org-archive-subtree
+(defun kev/org-archive-subtree
   (org-copy-subtree))
 #+end_src`
-** Display preferences
-
-I like to see an outline of pretty bullets instead of a list of asterisks.
-
-#+begin_src elisp
-(use-package! org-bullets-mode
-  :hook org-mode)
-#+end_src
-
-#+RESULTS:
-
-
-Use syntax highlighting in source blocks while editing.
-
-#+begin_src elisp
-#+end_src
-
-Make TAB act as if it were issued in a buffer of the language's major mode.
-
-#+begin_src elisp
-#+end_src
 
 ** org-roam
 #+begin_src elisp
