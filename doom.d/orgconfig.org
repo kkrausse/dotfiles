@@ -683,48 +683,46 @@ Make TAB act as if it were issued in a buffer of the language's major mode.
 
 ** org-roam
 #+begin_src elisp
-(setq org-roam-v2-ack t)
 
+;; TODO do the file resize thing and visual line mode
+;; to org roam dir
 ;; org roam to display in same window
 (customize-set-variable
  'display-buffer-alist
  (append '(("\\*org-roam\\*" (display-buffer-same-window))
            ("\\*lsp-help\\*" (display-buffer-same-window)))
-       display-buffer-alist))
+         display-buffer-alist))
 
-;; define some keys everywhere
-(map!
- (:prefix ("C-c n" . "Org Roam")
-  "f" 'org-roam-node-find
-  "d" 'org-roam-dailies-find-directory))
+;; map org roam everywhere to these autoloads
+(map! (:prefix ("C-c n" . "Org Roam")
+               "f" #'org-roam-node-find
+               "d" #'org-roam-dailies-find-directory))
 
-(use-package! org-roam
-  :commands org-roam-node-find
-  :bind (:map org-roam-mode-map ;; this isn't a thing now
-         (("C-c n l" . org-roam)
-          ("C-c n g" . org-roam-graph)
-          ("C-c n r" . org-roam-buffer-refresh))
-         :map org-mode-map
-         (("C-c n i" . org-roam-node-insert)
-          ("C-c n c" . org-id-get-create)
-          ("C-c n r" . org-roam-buffer-toggle)
-          ("C-c n s" . org-roam-db-sync)
-          ("C-c n a" . org-roam-alias-add)
-          ; already implemented above globally
-          ;("C-c n f" . org-roam-node-find)
-          ;("C-c n d" . org-roam-dailies-find-directory)
-          ))
-  :config
+(after! org-roam
   (setq org-roam-dailies-directory "daily/")
   ;; If you're using a vertical completion framework, you might want a more informative completion interface
-  ;(setq org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
+                                        ;(setq org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
+  (org-roam-db-autosync-mode 1)
 
-  (org-roam-db-autosync-mode 1))
+  ;; define some keys everywhere
+  (setq org-roam-v2-ack t)
+
+  (map! (:map org-mode-map
+              (:prefix ("C-c n" . "Org Roam")
+                       "i" #'org-roam-node-insert
+                       "c" #'org-id-get-create
+                       "r" #'org-roam-buffer-toggle
+                       "s" #'org-roam-db-sync
+                       "a" #'org-roam-alias-add)))
+  )
+
+(use-package! org-roam
+  :after org
+  ;; this would load it during idle time
+  ;; :defer-incrementally org
+  ;; :commands (org-roam-node-find org-roam-node-insert)
+  )
 #+end_src
-
-#+RESULTS:
-: #s(hash-table size 65 test eql rehash-size 1.5 rehash-threshold 0.8125 data (:use-package (25478 22530 426227 0) :init (25478 22530 426157 0) :init-secs (0 0 11 0) :use-package-secs (0 0 89 0)))
-
 * Language-Specific
 ** rust
 

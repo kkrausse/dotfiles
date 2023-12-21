@@ -67,7 +67,7 @@
            :branch "master"))
 
 (package! browse-at-remote
- ;; :pin "cef26f2c063f2473af42d0e126c8613fe2f709e4"
+  ;; :pin "cef26f2c063f2473af42d0e126c8613fe2f709e4"
   :recipe (:host github
            :repo "rmuslimov/browse-at-remote"
            :branch "master"))
@@ -78,9 +78,12 @@
 ;;            :branch "master"))
 
 (package! org-roam
-  :recipe (:host github
-           :repo "org-roam/org-roam"
-		   :files (:defaults "extensions/*")))
+  ;; couldn't figure this out cuz has weird build. just use melpa
+  ;; actually, was something else, but the files thing scares me
+  ;; :recipe (:host github
+  ;;          :repo "org-roam/org-roam"
+  ;;          :files (:defaults "extensions/*"))
+  )
 
 ;; dont think this is needed bc of doom?
 ;; (package! jet
