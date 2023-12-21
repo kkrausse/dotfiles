@@ -8,6 +8,12 @@ this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_chann
 ;; -*- lexical-binding: t; -*-
 (load "~/.doom.d/machine-specific.el")
 
+;; finer grained font size control
+(setq doom-font-increment 1)
+(setq use-package-always-defer 't)
+(setq use-package-compute-statistics 't)
+
+
 ;; TODO why do I need this?
 ;; something wrong with the config I think
 (global-company-mode 1)
@@ -72,31 +78,20 @@ this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_chann
 
 * UI preferences
 ** Theme
-
-Theme and resize
 #+begin_src elisp
-;; finer grained font size control
-(setq doom-font-increment 1)
-(setq use-package-always-defer 't)
-(setq use-package-compute-statistics 't)
-
-
 ;; theme shite
-
 
 (setq doom-customize-theme-hook nil)
 ;; see https://www.ditig.com/256-colors-cheat-sheet for colors! should just do 256 tbh so
 ;; also, maybe can look at default doom themes for some guidance
 (load-theme 'my-vibrant t)
 
+(setq doom-theme 'my-vibrant)
+
 ;; is good, but it's annoying because you don't rely completely on your theme
 ;; but this must be set first since things rely on this I guess
-(custom-set-faces!
-  `(default :background ,(doom-color 'bg)))
+;; (custom-set-faces! `(default :background ,(doom-color 'bg)))
 #+end_src
-
-#+RESULTS:
-| doom--customize-themes-h-16 |
 ** Modeline
 
 doom-modeline package for [[https://github.com/seagle0128/doom-modeline][dopeness]]
@@ -731,17 +726,6 @@ Make TAB act as if it were issued in a buffer of the language's major mode.
 : #s(hash-table size 65 test eql rehash-size 1.5 rehash-threshold 0.8125 data (:use-package (25478 22530 426227 0) :init (25478 22530 426157 0) :init-secs (0 0 11 0) :use-package-secs (0 0 89 0)))
 
 * Language-Specific
-#+begin_src elisp
-
-;; terraform lsp doesn't do shit
-;;
-;; (add-hook! terraform-mode
-;;            (lsp)
-;;            (lsp-mode 1))
-#+end_src
-
-#+RESULTS:
-
 ** rust
 
 #+begin_src elisp
@@ -782,20 +766,19 @@ Make TAB act as if it were issued in a buffer of the language's major mode.
 
 #+RESULTS:
 
-** Lisp
-
-goto for elisp
+** elisp
 
 #+begin_src elisp
-(map! :mode emacs-lisp-mode
-      :localleader
-      "gg" #'elisp-slime-nav-find-elisp-thing-at-point
-      "gb" #'pop-tag-mark)
-#+end_src
+;; gotos
+(use-package! elisp-slime-nav
+  :defer-incrementally (elisp-mode ielm))
 
-disable doc checkers
-
-#+begin_src elisp
+(add-hook! (emacs-lisp-mode ielm-mode)
+    (turn-on-elisp-slime-nav-mode)
+    (map! :mode emacs-lisp-mode
+          :localleader
+          "gg" #'elisp-slime-nav-find-elisp-thing-at-point
+          "gb" #'pop-tag-mark))
 #+end_src
 ** Ruby
 #+begin_src elisp
