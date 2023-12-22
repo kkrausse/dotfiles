@@ -2,16 +2,31 @@
 
 this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_channel=thoughtbot][this video]] and the [[https://github.com/hrs/dotfiles/blob/main/emacs/dot-emacs.d/configuration.org][setup he uses]].
 
+notes:
+- direction is to prefer `map!`, `after!`, and `add-hook!` as opposed to extensive
+  `use-package` commands
+
 * initial setup / utils
 
 #+begin_src elisp
 ;; -*- lexical-binding: t; -*-
 (load "~/.doom.d/machine-specific.el")
 
+(defmacro kev/comment (&rest args)
+  nil)
+
+;; I'm *pretty sure* this helps goto find the doom specific functions
+(add-to-list 'load-path (expand-file-name "lisp" "~/.config/emacs"))
+(add-to-list 'load-path (expand-file-name "lisp/lib" "~/.config/emacs"))
+
 ;; finer grained font size control
-(setq doom-font-increment 1)
-(setq use-package-always-defer 't)
-(setq use-package-compute-statistics 't)
+(setq doom-font-increment 1
+      use-package-always-defer 't
+      use-package-compute-statistics 't)
+
+;; c source directory
+;; `git clone --branch emacs-28.2 --depth 1 https://github.com/emacs-mirror/emacs repos/emacs`
+(setq find-function-C-source-directory "~/.doom.d/repos/emacs/src")
 
 
 ;; TODO why do I need this?
@@ -35,7 +50,7 @@ this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_chann
         company-dabbrev-other-buffers t)
   ;; I don't want tab to cycle
   (map! :map company-active-map
-              "<tab>" #'company-complete)
+        "<tab>" #'company-complete)
   )
 
 ;; diplay buffer stuff
@@ -586,7 +601,7 @@ line numbers
   )
 #+end_src
 
-* Org Mode
+* Lang
 ** org
 #+begin_src elisp
 (after! org
@@ -620,16 +635,19 @@ line numbers
         "'"  #'org-edit-special
         (:prefix "g" "b" #'org-mark-ring-goto)))
 
+(defun kev-set-visual-columns ()
+  (visual-line-mode 1)
+  (visual-fill-column-mode 1)
+  (after! visual-fill-column
+    (setq visual-fill-column-width 80
+          ;; idk if I like this yet
+          visual-fill-column-center-text nil)))
+
 (add-hook! 'org-mode-hook :append
            ;; org roam should fix column width!
   (after! org-roam
     (when (is-file-in-subdirectory org-roam-directory)
-      (visual-fill-column-mode 1)
-      (after! visual-fill-column
-        (setq visual-fill-column-width 80
-              ;; idk if I like this yet
-              visual-fill-column-center-text nil))))
-  )
+      (kev-set-visual-columns))))
 
 ;; I like to see an outline of pretty bullets instead of a list of asterisks.
 ;; (use-package! org-bullets-mode
@@ -645,13 +663,12 @@ wat?
 
 ** org-roam
 #+begin_src elisp
-
 ;; TODO do the file resize thing and visual line mode
 ;; to org roam dir
 ;; org roam to display in same window
 (customize-set-variable
  'display-buffer-alist
- (append '(("\\*org-roam\\*" (display-buffer-same-window))
+ (append '(("\\*org-roam.*\\*" (display-buffer-same-window))
            ("\\*lsp-help\\*" (display-buffer-same-window)))
          display-buffer-alist))
 
@@ -663,17 +680,41 @@ wat?
 (after! org-roam
   (setq org-roam-dailies-directory "daily/")
   ;; If you're using a vertical completion framework, you might want a more informative completion interface
-                                        ;(setq org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
+  ;; (setq org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
   (org-roam-db-autosync-mode 1)
 
+  (defun kevin-org-roam-preview ()
+    "default is `org-roam-preview-default-function' This changes to just line"
+    (let ((beg (save-excursion
+                 ;; (evil-previous-line)
+                 ;; (evil-beginning-of-line)
+                 (while (not (= 0 (current-indentation)))
+                   (org-up-element))
+                 (point)))
+          (end (save-excursion
+                 (evil-end-of-line)
+                 (+ 1 (point)))))
+    (string-trim (buffer-substring-no-properties beg end))))
+
+  (add-hook! 'org-roam-mode-hook
+             (kev-set-visual-columns))
+
   ;; define some keys everywhere
-  (setq org-roam-v2-ack t)
+  (setq org-roam-v2-ack t
+        org-roam-preview-function #'kevin-org-roam-preview)
 
   (map! (:map org-mode-map
               (:prefix ("C-c n" . "Org Roam")
                        "i" #'org-roam-node-insert
                        "c" #'org-id-get-create
-                       "r" #'org-roam-buffer-toggle
+                       "r"
+                       '("org-roam-buffer-display-dedicated" .
+                         (lambda ()
+                           (interactive)
+                           ;; sets up prefix arg so it uses current node
+                           ;; number `1' is not specific here
+                           (setq current-prefix-arg '(1))
+                           (call-interactively #'org-roam-buffer-display-dedicated)))
                        "s" #'org-roam-db-sync
                        "a" #'org-roam-alias-add)))
   )
@@ -685,7 +726,6 @@ wat?
   ;; :commands (org-roam-node-find org-roam-node-insert)
   )
 #+end_src
-* Language-Specific
 ** rust
 
 #+begin_src elisp

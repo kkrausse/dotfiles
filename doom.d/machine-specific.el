@@ -12,8 +12,6 @@
 ;; change `org-directory'. It must be set before org loads!
 (setq org-directory "~/org/")
 
-;; c source directory so it doesn't prompt each time
-(setq find-function-C-source-directory "~/Documents/repos/etc/emacs/src")
 
 (defun edit-env-file ()
   (interactive)
