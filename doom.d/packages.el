@@ -78,12 +78,12 @@
 ;;            :branch "master"))
 
 (package! org-roam
-  ;; couldn't figure this out cuz has weird build. just use melpa
-  ;; actually, was something else, but the files thing scares me
-  ;; :recipe (:host github
-  ;;          :repo "org-roam/org-roam"
-  ;;          :files (:defaults "extensions/*"))
-  )
+  ;; taken from repo
+  :recipe (:host github :repo "org-roam/org-roam"
+           :files (:defaults "extensions/*")
+           ;; do this if modifying locally
+           ;; :build (:not compile)
+           ))
 
 ;; dont think this is needed bc of doom?
 ;; (package! jet

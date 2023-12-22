@@ -16,8 +16,11 @@ notes:
   nil)
 
 ;; I'm *pretty sure* this helps goto find the doom specific functions
-(add-to-list 'load-path (expand-file-name "lisp" "~/.config/emacs"))
-(add-to-list 'load-path (expand-file-name "lisp/lib" "~/.config/emacs"))
+(setq find-library-source-path
+      (append load-path
+              (list
+               (expand-file-name "lisp" "~/.config/emacs")
+               (expand-file-name "lisp/lib" "~/.config/emacs"))))
 
 ;; finer grained font size control
 (setq doom-font-increment 1
@@ -649,9 +652,9 @@ line numbers
     (when (is-file-in-subdirectory org-roam-directory)
       (kev-set-visual-columns))))
 
-;; I like to see an outline of pretty bullets instead of a list of asterisks.
-;; (use-package! org-bullets-mode
-;;   :hook org-mode)
+;; makes a clearer distinction between sub-bullets
+(use-package! org-bullets-mode
+  :hook org-mode)
 #+end_src
 
 wat?
@@ -663,6 +666,7 @@ wat?
 
 ** org-roam
 #+begin_src elisp
+;; -*- lexical-binding: t; -*-
 ;; TODO do the file resize thing and visual line mode
 ;; to org roam dir
 ;; org roam to display in same window
@@ -673,11 +677,87 @@ wat?
          display-buffer-alist))
 
 ;; map org roam everywhere to these autoloads
+
+;; subnode workflow
+;; - command: add subnode
+;;   - add property "SUBNODE" "node at point" for each thing
+;; - command: search subnodes
+;; - command: insert subnode
+;; - filter out node with "SUBNODE" property for search
+
+(defun kev/roam-subnode-create ()
+  (interactive)
+  (let ((node (org-roam-node-at-point 'assert)))
+    (save-excursion
+      (goto-char (org-roam-node-point node))
+      (org-roam-add-property "1" "HAS_SUBNODES"))
+    (org-id-get-create 'force)
+    (org-roam-add-property (org-roam-node-id node) "SUBNODE_OF")
+    (org-roam-add-property (org-roam-node-title node) "SUBNODE_OF_TITLE")))
+
+(defun kev/roam-node-find ()
+  (interactive)
+  (funcall-interactively
+   'org-roam-node-find nil nil '(lambda (node)
+                                 (thread-last
+                                   node
+                                   (org-roam-node-properties)
+                                   (assoc-string "SUBNODE_OF")
+                                   (not)))))
+
+(defun kev/roam-subnode-read-parent ()
+  (org-roam-node-read nil
+                      '(lambda (node)
+                         (thread-last
+                           node
+                           (org-roam-node-properties)
+                           (assoc-string "HAS_SUBNODES")))
+                      nil
+                      'require-match))
+
+(defun kev/roam-subnode-filter-subnodes (parent-node)
+  (lambda (fnode)
+     (thread-last
+       fnode
+       (org-roam-node-properties)
+       (assoc-string "SUBNODE_OF")
+       (cdr)
+       (s-equals? (org-roam-node-id parent-node)))))
+
+(defun kev/roam-subnode-find ()
+  (interactive)
+  (let ((pnode (kev/roam-subnode-read-parent)))
+    (org-roam-node-visit
+     (org-roam-node-read nil
+                         (kev/roam-subnode-filter-subnodes pnode)
+                         nil
+                         'require-match))))
+
+(defun kev/roam-subnode-insert ()
+  (interactive)
+  (let ((pnode (kev/roam-subnode-read-parent)))
+    (org-roam-node-insert (kev/roam-subnode-filter-subnodes pnode))))
+
+
 (map! (:prefix ("C-c n" . "Org Roam")
-               "f" #'org-roam-node-find
+               ;; "f" #'org-roam-node-find
+               "f" #'kev/roam-node-find
                "d" #'org-roam-dailies-find-directory))
 
 (after! org-roam
+
+  ;; makes it so you can see if something is a subnode
+  (cl-defmethod org-roam-node-kev-subnode-format ((node org-roam-node))
+    (let ((parent-node (thread-last node
+                                    (org-roam-node-properties)
+                                    (assoc-string "SUBNODE_OF")
+                                    (cdr)
+                                    (org-roam-node-from-id))))
+      (if parent-node
+          (concat (org-roam-node-kev-subnode-format parent-node) " -> " (org-roam-node-title node))
+        (org-roam-node-title node))))
+  (setq org-roam-node-display-template "${kev-subnode-format}")
+
   (setq org-roam-dailies-directory "daily/")
   ;; If you're using a vertical completion framework, you might want a more informative completion interface
   ;; (setq org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
@@ -694,10 +774,11 @@ wat?
           (end (save-excursion
                  (evil-end-of-line)
                  (+ 1 (point)))))
-    (string-trim (buffer-substring-no-properties beg end))))
+      (string-trim (buffer-substring-no-properties beg end))))
 
+  ;; makes roam stuff prettier
   (add-hook! 'org-roam-mode-hook
-             (kev-set-visual-columns))
+    (kev-set-visual-columns))
 
   ;; define some keys everywhere
   (setq org-roam-v2-ack t
@@ -705,19 +786,21 @@ wat?
 
   (map! (:map org-mode-map
               (:prefix ("C-c n" . "Org Roam")
-                       "i" #'org-roam-node-insert
+                       (:prefix ("s" . "sub-node")
+                                "i" #'kev/roam-subnode-insert
+                                "c" #'kev/roam-subnode-create
+                                "f" #'kev/roam-subnode-find)
                        "c" #'org-id-get-create
-                       "r"
-                       '("org-roam-buffer-display-dedicated" .
-                         (lambda ()
-                           (interactive)
-                           ;; sets up prefix arg so it uses current node
-                           ;; number `1' is not specific here
-                           (setq current-prefix-arg '(1))
-                           (call-interactively #'org-roam-buffer-display-dedicated)))
-                       "s" #'org-roam-db-sync
-                       "a" #'org-roam-alias-add)))
-  )
+                       "i" #'org-roam-node-insert
+                       "r" '("org-roam-buffer-display-dedicated" .
+                             (lambda ()
+                               (interactive)
+                               ;; sets up prefix arg so it uses current node
+                               ;; number `1' is not specific here
+                               (setq current-prefix-arg '(1))
+                               (call-interactively #'org-roam-buffer-display-dedicated)))
+                       "d" #'org-roam-db-sync
+                       "a" #'org-roam-alias-add))))
 
 (use-package! org-roam
   :after org
