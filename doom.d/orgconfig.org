@@ -672,12 +672,16 @@ wat?
 ;; org roam to display in same window
 (customize-set-variable
  'display-buffer-alist
- (append '(("\\*org-roam.*\\*" (display-buffer-same-window))
-           ("\\*lsp-help\\*" (display-buffer-same-window)))
+ (append '(("\\*org-roam.*\\*" (display-buffer-reuse-window display-buffer-same-window))
+           ("\\*lsp-help\\*" (display-buffer-reuse-window display-buffer-same-window)))
          display-buffer-alist))
 
 ;; map org roam everywhere to these autoloads
 
+;; problem statement:
+;; explosion of one flat directory is untenable especially when you want to look for something within
+;; a specific directory. Still want to preserve roam's ultimate freedom and linking
+;;
 ;; subnode workflow
 ;; - command: add subnode
 ;;   - add property "SUBNODE" "node at point" for each thing
@@ -685,25 +689,16 @@ wat?
 ;; - command: insert subnode
 ;; - filter out node with "SUBNODE" property for search
 
-(defun kev/roam-subnode-create ()
-  (interactive)
-  (let ((node (org-roam-node-at-point 'assert)))
-    (save-excursion
-      (goto-char (org-roam-node-point node))
-      (org-roam-add-property "1" "HAS_SUBNODES"))
-    (org-id-get-create 'force)
-    (org-roam-add-property (org-roam-node-id node) "SUBNODE_OF")
-    (org-roam-add-property (org-roam-node-title node) "SUBNODE_OF_TITLE")))
+(defun kev/complement (fn)
+  (lambda (&rest args)
+    (not (apply 'funcall fn args))))
 
-(defun kev/roam-node-find ()
-  (interactive)
-  (funcall-interactively
-   'org-roam-node-find nil nil '(lambda (node)
-                                 (thread-last
-                                   node
-                                   (org-roam-node-properties)
-                                   (assoc-string "SUBNODE_OF")
-                                   (not)))))
+(defun kev/roam-subnode-get-parent (node)
+  (thread-last node
+               (org-roam-node-properties)
+               (assoc-string "SUBNODE_OF")
+               (cdr)
+               (org-roam-node-from-id)))
 
 (defun kev/roam-subnode-read-parent ()
   (org-roam-node-read nil
@@ -724,6 +719,14 @@ wat?
        (cdr)
        (s-equals? (org-roam-node-id parent-node)))))
 
+;;;;;;;;;;;;;;;; main interface ;;;;;;;;;;;;;;;
+
+(defun kev/roam-subnode-create ()
+  (interactive)
+  (let ((node (kev/roam-subnode-read-parent)))
+    (org-id-get-create 'force)
+    (org-roam-add-property (org-roam-node-id node) "SUBNODE_OF")))
+
 (defun kev/roam-subnode-find ()
   (interactive)
   (let ((pnode (kev/roam-subnode-read-parent)))
@@ -738,15 +741,40 @@ wat?
   (let ((pnode (kev/roam-subnode-read-parent)))
     (org-roam-node-insert (kev/roam-subnode-filter-subnodes pnode))))
 
-
 (map! (:prefix ("C-c n" . "Org Roam")
                ;; "f" #'org-roam-node-find
-               "f" #'kev/roam-node-find
+               "f" (cons "subnode-find"
+                         (lambda ()
+                           (interactive)
+                           (funcall #'org-roam-node-find nil nil (kev/complement #'kev/roam-subnode-get-parent))))
                "d" #'org-roam-dailies-find-directory))
 
 (after! org-roam
 
+  (map! (:map org-mode-map
+              (:prefix ("C-c n" . "Org Roam")
+                       (:prefix ("s" . "sub-node")
+                                "i" #'kev/roam-subnode-insert
+                                "c" #'kev/roam-subnode-create
+                                "f" #'kev/roam-subnode-find)
+                       "c" #'org-id-get-create
+                       "i" (cons "insert node link"
+                                 (lambda ()
+                                   (interactive)
+                                   (funcall #'org-roam-node-insert
+                                            (kev/complement #'kev/roam-subnode-get-parent))))
+                       "r" '("org-roam-buffer-display-dedicated" .
+                             (lambda ()
+                               (interactive)
+                               ;; sets up prefix arg so it uses current node
+                               ;; number `1' is not specific here
+                               (setq current-prefix-arg '(1))
+                               (call-interactively #'org-roam-buffer-display-dedicated)))
+                       "d" #'org-roam-db-sync
+                       "a" #'org-roam-alias-add)))
+
   ;; makes it so you can see if something is a subnode
+  ;; probably not needed anymore.
   (cl-defmethod org-roam-node-kev-subnode-format ((node org-roam-node))
     (let ((parent-node (thread-last node
                                     (org-roam-node-properties)
@@ -763,13 +791,14 @@ wat?
   ;; (setq org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
   (org-roam-db-autosync-mode 1)
 
-  (defun kevin-org-roam-preview ()
+  (defun kev/org-roam-preview ()
     "default is `org-roam-preview-default-function' This changes to just line"
     (let ((beg (save-excursion
                  ;; (evil-previous-line)
                  ;; (evil-beginning-of-line)
                  (while (not (= 0 (current-indentation)))
                    (org-up-element))
+                 (beginning-of-line)
                  (point)))
           (end (save-excursion
                  (evil-end-of-line)
@@ -782,25 +811,9 @@ wat?
 
   ;; define some keys everywhere
   (setq org-roam-v2-ack t
-        org-roam-preview-function #'kevin-org-roam-preview)
+        org-roam-preview-function #'kev/org-roam-preview)
 
-  (map! (:map org-mode-map
-              (:prefix ("C-c n" . "Org Roam")
-                       (:prefix ("s" . "sub-node")
-                                "i" #'kev/roam-subnode-insert
-                                "c" #'kev/roam-subnode-create
-                                "f" #'kev/roam-subnode-find)
-                       "c" #'org-id-get-create
-                       "i" #'org-roam-node-insert
-                       "r" '("org-roam-buffer-display-dedicated" .
-                             (lambda ()
-                               (interactive)
-                               ;; sets up prefix arg so it uses current node
-                               ;; number `1' is not specific here
-                               (setq current-prefix-arg '(1))
-                               (call-interactively #'org-roam-buffer-display-dedicated)))
-                       "d" #'org-roam-db-sync
-                       "a" #'org-roam-alias-add))))
+  )
 
 (use-package! org-roam
   :after org
@@ -809,6 +822,7 @@ wat?
   ;; :commands (org-roam-node-find org-roam-node-insert)
   )
 #+end_src
+
 ** rust
 
 #+begin_src elisp
