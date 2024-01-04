@@ -4,7 +4,7 @@ this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_chann
 
 notes:
 - direction is to prefer `map!`, `after!`, and `add-hook!` as opposed to extensive
-  `use-package` commands
+   `use-package` commands
 
 * initial setup / utils
 
@@ -665,29 +665,18 @@ wat?
 #+end_src`
 
 ** org-roam
+
+org-roam setup and shortcuts
+
+- subnode extention
+  - problem statement: explosion of one flat directory is untenable especially when you want to look for something within a specific directory. Still want to preserve roam's ultimate freedom and linking though.
+  - implementation
+    - property =:SUBNODE_OF: <org_id>= will mark subnodes and find those to search.
+    - parents are found by just finding all ids that appear in a :subnode_of:
+    - have to change regular finds to ignore subnodes now
+
 #+begin_src elisp
 ;; -*- lexical-binding: t; -*-
-;; TODO do the file resize thing and visual line mode
-;; to org roam dir
-;; org roam to display in same window
-(customize-set-variable
- 'display-buffer-alist
- (append '(("\\*org-roam.*\\*" (display-buffer-reuse-window display-buffer-same-window))
-           ("\\*lsp-help\\*" (display-buffer-reuse-window display-buffer-same-window)))
-         display-buffer-alist))
-
-;; map org roam everywhere to these autoloads
-
-;; problem statement:
-;; explosion of one flat directory is untenable especially when you want to look for something within
-;; a specific directory. Still want to preserve roam's ultimate freedom and linking
-;;
-;; subnode workflow
-;; - command: add subnode
-;;   - add property "SUBNODE" "node at point" for each thing
-;; - command: search subnodes
-;; - command: insert subnode
-;; - filter out node with "SUBNODE" property for search
 
 (defun kev/complement (fn)
   (lambda (&rest args)
@@ -700,15 +689,28 @@ wat?
                (cdr)
                (org-roam-node-from-id)))
 
-(defun kev/roam-subnode-read-parent ()
-  (org-roam-node-read nil
-                      '(lambda (node)
-                         (thread-last
-                           node
-                           (org-roam-node-properties)
-                           (assoc-string "HAS_SUBNODES")))
-                      nil
-                      'require-match))
+(defun kev/roam-subnode-get-parent-ids ()
+  (seq-reduce
+   (lambda (ids node)
+     (let ((subnode-of (thread-last node
+                                    (org-roam-node-properties)
+                                    (assoc-string "SUBNODE_OF")
+                                    (cdr))))
+       (if (and subnode-of
+                (not (member subnode-of ids)))
+           (cons subnode-of ids)
+         ids)))
+   (org-roam-node-list)
+   nil))
+
+(defun kev/roam-subnode-find-parent ()
+  (let ((parent-ids (kev/roam-subnode-get-parent-ids)))
+    (org-roam-node-read nil
+                        (lambda (node)
+                           (member (org-roam-node-id node) parent-ids))
+                        nil
+                        'require-match
+                        "parend node: ")))
 
 (defun kev/roam-subnode-filter-subnodes (parent-node)
   (lambda (fnode)
@@ -723,13 +725,13 @@ wat?
 
 (defun kev/roam-subnode-create ()
   (interactive)
-  (let ((node (kev/roam-subnode-read-parent)))
+  (let ((parent (org-roam-node-read nil (kev/complement #'kev/roam-subnode-get-parent) nil 'require-match "parent node: ")))
     (org-id-get-create 'force)
-    (org-roam-add-property (org-roam-node-id node) "SUBNODE_OF")))
+    (org-roam-add-property (org-roam-node-id parent) "SUBNODE_OF")))
 
 (defun kev/roam-subnode-find ()
   (interactive)
-  (let ((pnode (kev/roam-subnode-read-parent)))
+  (let ((pnode (kev/roam-subnode-find-parent)))
     (org-roam-node-visit
      (org-roam-node-read nil
                          (kev/roam-subnode-filter-subnodes pnode)
@@ -738,15 +740,31 @@ wat?
 
 (defun kev/roam-subnode-insert ()
   (interactive)
-  (let ((pnode (kev/roam-subnode-read-parent)))
+  (let ((pnode (kev/roam-subnode-find-parent)))
     (org-roam-node-insert (kev/roam-subnode-filter-subnodes pnode))))
 
+(defun kev/roam-subnode-find-non-subnodes ()
+  (interactive)
+  (funcall #'org-roam-node-find nil nil (kev/complement #'kev/roam-subnode-get-parent)))
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;; main roam config ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; TODO do the file resize thing and visual line mode
+;; to org roam dir
+;; org roam to display in same window
+(customize-set-variable
+ 'display-buffer-alist
+ (append '(("\\*org-roam.*\\*" (display-buffer-reuse-window display-buffer-same-window))
+           ("\\*lsp-help\\*" (display-buffer-reuse-window display-buffer-same-window)))
+         display-buffer-alist))
+
+;; map org roam everywhere to these autoloads
 (map! (:prefix ("C-c n" . "Org Roam")
                ;; "f" #'org-roam-node-find
-               "f" (cons "subnode-find"
-                         (lambda ()
-                           (interactive)
-                           (funcall #'org-roam-node-find nil nil (kev/complement #'kev/roam-subnode-get-parent))))
+               "f" (cons "find node" #'kev/roam-subnode-find-non-subnodes)
                "d" #'org-roam-dailies-find-directory))
 
 (after! org-roam
@@ -758,11 +776,7 @@ wat?
                                 "c" #'kev/roam-subnode-create
                                 "f" #'kev/roam-subnode-find)
                        "c" #'org-id-get-create
-                       "i" (cons "insert node link"
-                                 (lambda ()
-                                   (interactive)
-                                   (funcall #'org-roam-node-insert
-                                            (kev/complement #'kev/roam-subnode-get-parent))))
+                       "i" (cons "insert node link" #'kev/roam-subnode-find-non-subnodes)
                        "r" '("org-roam-buffer-display-dedicated" .
                              (lambda ()
                                (interactive)
