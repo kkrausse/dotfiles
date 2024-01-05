@@ -805,6 +805,8 @@ org-roam setup and shortcuts
   ;; (setq org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
   (org-roam-db-autosync-mode 1)
 
+  ;; TODO: make this only go up a few levels of indentation rather than to zero.
+  ;; should be pretty easy
   (defun kev/org-roam-preview ()
     "default is `org-roam-preview-default-function' This changes to just line"
     (let ((beg (save-excursion
@@ -955,10 +957,15 @@ for skewer, like a repl type thing for js
 
 ** python
 #+begin_src elisp
-(add-hook! python-mode
-           (require 'lsp-pyright)
-           (lsp)
-           (lsp-mode 1))
+;; NOTE you have to call this manually
+(add-hook! 'elpy-mode-hook
+  (map! :map elpy-mode-map
+        :localleader
+        (:prefix ("e" . "Eval")
+                 "b" #'elpy-shell-send-region-or-buffer
+                 "r" #'elpy-shell-send-region-or-buffer
+                 "d" #'elpy-shell-send-top-statement))
+  (pyvenv-activate (concat (projectile-project-root) ".venv")))
 #+end_src
 
 #+RESULTS:
@@ -1203,6 +1210,7 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
            ;; (evil-set-command-property 'evil-ex-search-backward :jump nil)
            (map! :map lsp-command-map
                  "gb" #'xref-go-back
+                 "gf" #'xref-go-forward
                  "d" #'lsp-ui-doc-glance)
            (map! "s-l" lsp-command-map)
 

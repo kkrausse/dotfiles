@@ -93,6 +93,8 @@
 ;;            :repo "https://github.com/ericdallo/jet.el"))
 
 (package! org-bullets)
+;; python repl
+(package! elpy)
 
 ;; navigation?
 (package! elisp-slime-nav)
