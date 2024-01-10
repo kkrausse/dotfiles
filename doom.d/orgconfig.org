@@ -616,8 +616,8 @@ line numbers
 
 ;; org babel stuff
 (after! org
-  (add-to-list 'org-babel-default-header-args:python
-             '(:results . "output")))
+  (add-to-list 'org-babel-default-header-args
+             '(python . (:results . "output"))))
 
 (after! org
   (define-key org-mode-map (kbd "C-c f") #'org-babel-execute-src-block)
@@ -775,10 +775,9 @@ org-roam setup and shortcuts
 ;; TODO do the file resize thing and visual line mode
 ;; to org roam dir
 ;; org roam to display in same window
-
-(-> 'display-buffer-alist
-    (add-to-list '("\\*org-roam.*\\*" (display-buffer-reuse-window display-buffer-same-window)))
-    (add-to-list '("\\*lsp-help\\*" (display-buffer-reuse-window display-buffer-same-window))))
+    
+(add-to-list 'display-buffer-alist '("\\*org-roam.*\\*" . (display-buffer-reuse-window display-buffer-same-window)))
+(add-to-list 'display-buffer-alist '("\\*lsp-help\\*" . (display-buffer-reuse-window display-buffer-same-window)))
 
 
 ;; map org roam everywhere to these autoloads

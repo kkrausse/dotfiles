@@ -56,14 +56,13 @@ export PATH="/opt/homebrew/opt/texinfo/bin:$PATH"
 export SDKMAN_DIR="$HOME/.sdkman"
 [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
 
-
 function run_if_command_exists {
     local command_to_check="$1"
     shift
     if command -v "$command_to_check" >/dev/null 2>&1; then
         "$@"
     else
-        echo "Command not found: $command_to_check"
+        echo "-- ignoring $command_to_check stuff"
     fi
 }
 

@@ -47,6 +47,7 @@
 ;;  switch add `:pin nil' if ya want
 ;; (package! clojure-mode :disable 1)
 
+;; nice partial screens for org roam
 (package! visual-fill-column
   :recipe (:host nil
            :repo "https://codeberg.org/joostkremers/visual-fill-column"))

@@ -7,16 +7,27 @@ fudgeups:
 
 to install
 
-- brew
-- oh my zsh
-  - AFTER this, delete zshrc, and relink the one here
+- shell
+  - zsh
+    - `sudo apt install zsh`
+  - fzf: `sudo apt install fzf` or `brew install fzf`
+  - to get ^r to work:
+     =git clone https://github.com/joshskidmore/zsh-fzf-history-search.git ~/.zsh/plugins/zsh-fzf-history-search=
 - emacs
+  - ubuntu:
+    #+begin_src sh
+sudo snap install emacs --classic
+sudo apt install cmake libtool autoconf automake # to compile stuff
+sudo apt-get install libtool-bin # to actually have an exec
+sudo apt install ripgrep # for doom
+sudo apt install xclip # for clipboard stuff
+    #+end_src
+  - mac:
   =brew tap d12frosted/emacs-plus=
   =brew install emacs-plus@28 --with-native-comp --with-ctags --with-xwidgets=
   https://github.com/d12frosted/homebrew-emacs-plus#install
-- doom https://github.com/doomemacs/doomemacs#install
-  - PROBLEM: texinfo is old, so maybe do this? =brew ln texinfo --force=
-  - symlink doom.d first! Then run =doom sync=
+  - doom (symlink doom.d first!) https://github.com/doomemacs/doomemacs#install
+    - PROBLEM: texinfo is old, so maybe do this? =brew ln texinfo --force=
 - worknotes https://github.com/kkrausse/worknotes
 - sdkman https://sdkman.io/install
 - clojure =brew install clojure/tools/clojure=
@@ -24,14 +35,9 @@ to install
   keytool -import -alias netskope -keystore ~/.sdkman/candidates/java/17.0.5-zulu/zulu-17.jdk/Contents/Home/lib/security/cacerts -file /Library/netskope-cert-bundle.pem
   #+end_src
 
-
 symlinks (run from project root)
 
-- fzf: `sudo apt install fzf` or `brew install fzf`
-
 #+begin_src bash
-# for fzf history plugin
-git clone https://github.com/joshskidmore/zsh-fzf-history-search.git ~/.zsh/plugins/zsh-fzf-history-search
 
 # for emacs c source file
 git clone --branch emacs-28.2 --depth 1 https://github.com/emacs-mirror/emacs doom.d/repos/emacs
@@ -40,11 +46,13 @@ cd dotfiles
 ln -s $(pwd)/doom.d/ ~/.doom.d
 ln -s $(pwd)/vimrc ~/.vimrc
 ln -s $(pwd)/zshrc ~/.zshrc
-ln -s $(pwd)/bin ~/.bin
 ln -s $(pwd)/gitconfig ~/.gitconfig
+# clojure specific
 ln -s $(pwd)/lsp ~/.lsp
 ln -s $(pwd)/clj-kondo ~/.clj-kondo
 ln -s $(pwd)/clojure ~/.clojure
+# idk if even needed
+ln -s $(pwd)/bin ~/.bin
 #+end_src
 
 vim vinegar

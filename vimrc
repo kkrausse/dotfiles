@@ -40,5 +40,10 @@ tnoremap <C-w><C-w> <C-\><C-N><C-w>w
 " let g:slime_vimterminal_config = {"vertical": "1", "term_cols": "72", "term_finish": "close"}
 " let g:slime_scala_ammonite = "1"
 
-
-
+" do clipboard stuff?
+if executable('xclip')
+  augroup xclip
+    autocmd!
+    autocmd TextYankPost * if v:event.operator is 'y' || v:event.operator is 'd' | call system('xclip -selection clipboard', @")
+  augroup END
+endif
