@@ -443,6 +443,11 @@ in `input' to get back edits made by the model"
                    :n "c" 'doom-edit-config
                    :n "t" '(lambda () (interactive) (find-file "~/dotfiles/tmp.org")))))
 
+
+;; (-> 'display-buffer-alist
+;;         (add-to-list '(".*magit.*"
+;;                        (display-buffer-reuse-window display-buffer-same-window))))
+
 (add-hook! magit-mode
   (map!
    (:prefix ("SPC j" . "kevin stuff")
@@ -607,6 +612,13 @@ line numbers
 * Lang
 ** org
 #+begin_src elisp
+
+
+;; org babel stuff
+(after! org
+  (add-to-list 'org-babel-default-header-args:python
+             '(:results . "output")))
+
 (after! org
   (define-key org-mode-map (kbd "C-c f") #'org-babel-execute-src-block)
 
@@ -662,7 +674,7 @@ wat?
 #+begin_src elisp
 (defun kev/org-archive-subtree
   (org-copy-subtree))
-#+end_src`
+#+end_src
 
 ** org-roam
 
@@ -671,9 +683,11 @@ org-roam setup and shortcuts
 - subnode extention
   - problem statement: explosion of one flat directory is untenable especially when you want to look for something within a specific directory. Still want to preserve roam's ultimate freedom and linking though.
   - implementation
-    - property =:SUBNODE_OF: <org_id>= will mark subnodes and find those to search.
+    - ONLY thing added is the property =:SUBNODE_OF: <org_id>= which will mark subnodes and find those to search & exclude them from regular search, exept by parent.
     - parents are found by just finding all ids that appear in a :subnode_of:
     - have to change regular finds to ignore subnodes now
+  - TODO
+    - make roam buffer section for subnodes
 
 #+begin_src elisp
 ;; -*- lexical-binding: t; -*-
@@ -725,9 +739,15 @@ org-roam setup and shortcuts
 
 (defun kev/roam-subnode-create ()
   (interactive)
-  (let ((parent (org-roam-node-read nil (kev/complement #'kev/roam-subnode-get-parent) nil 'require-match "parent node: ")))
-    (org-id-get-create 'force)
-    (org-roam-add-property (org-roam-node-id parent) "SUBNODE_OF")))
+  (let ((parent (org-roam-node-read nil
+                                    ;; I have subnodes of subnodes so I can't do this lol
+                                    nil ;;(kev/complement #'kev/roam-subnode-get-parent)
+                                    nil
+                                    'require-match "parent node: ")))
+    (org-id-get-create)
+    (org-roam-add-property (org-roam-node-id parent) "SUBNODE_OF")
+    ;; subnode of title purely for visibility, not used for anything
+    (org-roam-add-property (org-roam-node-title parent) "SUBNODE_OF_TITLE")))
 
 (defun kev/roam-subnode-find ()
   (interactive)
@@ -755,11 +775,11 @@ org-roam setup and shortcuts
 ;; TODO do the file resize thing and visual line mode
 ;; to org roam dir
 ;; org roam to display in same window
-(customize-set-variable
- 'display-buffer-alist
- (append '(("\\*org-roam.*\\*" (display-buffer-reuse-window display-buffer-same-window))
-           ("\\*lsp-help\\*" (display-buffer-reuse-window display-buffer-same-window)))
-         display-buffer-alist))
+
+(-> 'display-buffer-alist
+    (add-to-list '("\\*org-roam.*\\*" (display-buffer-reuse-window display-buffer-same-window)))
+    (add-to-list '("\\*lsp-help\\*" (display-buffer-reuse-window display-buffer-same-window))))
+
 
 ;; map org roam everywhere to these autoloads
 (map! (:prefix ("C-c n" . "Org Roam")
@@ -776,7 +796,11 @@ org-roam setup and shortcuts
                                 "c" #'kev/roam-subnode-create
                                 "f" #'kev/roam-subnode-find)
                        "c" #'org-id-get-create
-                       "i" (cons "insert node link" #'kev/roam-subnode-find-non-subnodes)
+                       "i" (cons "insert node link"
+                                 '(lambda ()
+                                   (interactive)
+                                   (funcall #'org-roam-node-insert (kev/complement #'kev/roam-subnode-get-parent)))
+                                 )
                        "r" '("org-roam-buffer-display-dedicated" .
                              (lambda ()
                                (interactive)
@@ -809,17 +833,26 @@ org-roam setup and shortcuts
   ;; should be pretty easy
   (defun kev/org-roam-preview ()
     "default is `org-roam-preview-default-function' This changes to just line"
-    (let ((beg (save-excursion
-                 ;; (evil-previous-line)
-                 ;; (evil-beginning-of-line)
-                 (while (not (= 0 (current-indentation)))
-                   (org-up-element))
+    (let* ((start-indent (current-indentation))
+           (beg (save-excursion
+                  (while (not (or (= 0 (current-indentation))
+                                  ;; go up two levels of indent
+                                  (<= (current-indentation) (- start-indent 3))))
+                   (evil-previous-line))
                  (beginning-of-line)
                  (point)))
           (end (save-excursion
-                 (evil-end-of-line)
-                 (+ 1 (point)))))
-      (string-trim (buffer-substring-no-properties beg end))))
+                 ;; so it collects heading stuff. Maybe should remove
+                 (if (= ?* (char-after (line-beginning-position)))
+                     (org-end-of-subtree)
+                   (progn
+                     (evil-next-line)
+                     (while (not (or (<= (current-indentation) start-indent)
+                                     (<= (point-max) (line-end-position))))
+                       (evil-next-line))
+                     (evil-beginning-of-line)))
+                 (point))))
+      (string-trim (concat (buffer-substring-no-properties beg end) "\n"))))
 
   ;; makes roam stuff prettier
   (add-hook! 'org-roam-mode-hook

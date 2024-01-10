@@ -28,8 +28,7 @@
                            ;;
                            ;; z ensures it is later on the classpath
                            ;; I guess this at least puts it on clojure-lsp's radar
-                           zkev.local/clojure-src {:local/root "/Users/kevinkrausse/Documents/repos"}
-                           kev/util {:local/root "/Users/kevinkrausse/Documents/taxbit/clj-utils"}
+                           ;; zkev.local/clojure-src {:local/root "/Users/kevinkrausse/Documents/repos"}
 
                            ;;;;;;;;;;;;;; end local stuff ;;;;;;;;;;;;;;;;;;;;;;;
                            org.clojure/core.async {:git/url "https://github.com/clojure/core.async"
@@ -49,9 +48,6 @@
                            ;; async profiler!
                            com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.1.1"}
                            djblue/portal                            {:mvn/version "0.49.1"}
-                           ;;#_#_
-                           lambdaisland/classpath                   {:git/url "https://github.com/lambdaisland/classpath"
-                                                                     :sha     "a0142d5ac2b1a390201fb8db245df7cacac692f2"}
                            ;; this needs to be commented out sometimes because it overrides an aws transient
                            ;; dep for vilhelmina that fucks everything up
                            ;;org.clojure/tools.deps.alpha {:mvn/version "0.12.1030"}
