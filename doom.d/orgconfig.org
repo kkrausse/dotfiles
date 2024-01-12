@@ -1,3 +1,6 @@
+:PROPERTIES:
+:header-args: :results silent
+:END:
 #+TITLE: Doom Emacs Config
 
 this setup was taken from [[https://www.youtube.com/watch?v=SzA2YODtgK4&ab_channel=thoughtbot][this video]] and the [[https://github.com/hrs/dotfiles/blob/main/emacs/dot-emacs.d/configuration.org][setup he uses]].
@@ -32,9 +35,9 @@ notes:
 (setq find-function-C-source-directory "~/.doom.d/repos/emacs/src")
 
 
-;; TODO why do I need this?
-;; something wrong with the config I think
-(global-company-mode 1)
+
+(add-hook 'shell-mode-hook (lambda ()
+                             (company-mode -1)))
 
 ;; DONT add regex search to the jump stack!
 (evil-set-command-property 'evil-ex-search-next :jump nil)
@@ -43,8 +46,13 @@ notes:
 ;; company mode setup
 
 (after! company
-  ;; this is also above bug idk if needed
-  (global-company-mode 1)
+  ;; TODO why do I need this?
+  ;; something wrong with the config I think
+  (global-company-mode -1)
+
+  (add-hook! 'org-mode-hook
+    (setq company-idle-delay 0.9))
+
   (setq company-idle-delay 0.5)
   (company-mode-on)
   (setq company-minimum-prefix-length 1
@@ -85,37 +93,60 @@ notes:
 #+begin_src elisp
 ;; theme shite
 
-(setq doom-customize-theme-hook nil)
 ;; see https://www.ditig.com/256-colors-cheat-sheet for colors! should just do 256 tbh so
 ;; also, maybe can look at default doom themes for some guidance
-(load-theme 'my-vibrant t)
 
+;; my custom shit
+;; (setq doom-customize-theme-hook nil)
+(load-theme 'my-vibrant t)
 (setq doom-theme 'my-vibrant)
+
+;;(setq doom-theme 'doom-vibrant)
+;; TODO:
+;; doom-vibrant, but port over my changes to just the hook
+;; doom-one is default and ssems like it would have most support for doom-specific things but it's is super low contrast so I think I need to like overlay the solarized colors on the featuresset of doom-one
+;; note: that it is the default also means it would be overly configurable and gross to work with
+;; also note: I started with vibrant but changed literally everything. It's not the same theme anymore at all.
+
+;; doom-solarized-dark
+;; doom-solarized-dark-high-contrast
+;; doom-molokai
 
 ;; is good, but it's annoying because you don't rely completely on your theme
 ;; but this must be set first since things rely on this I guess
 ;; (custom-set-faces! `(default :background ,(doom-color 'bg)))
 #+end_src
+
 ** Modeline
 
 doom-modeline package for [[https://github.com/seagle0128/doom-modeline][dopeness]]
-#+begin_src elisp
-(use-package! doom-modeline
-  :init (doom-modeline-mode 1)
-  :config
-  ;; this sets column in modeline!
+
+#+begin_src elisp :results silent
+(after! doom-modeline
+  (doom-modeline-mode 1)
+  (setq doom-modeline-percent-position nil
+        doom-modeline-height 1)
+
   (column-number-mode 1)
+  ;; compare to https://github.com/seagle0128/doom-modeline/blob/e521d32c2d670dc664424857e3fc18a37f0728f6/doom-modeline.el#L90
+  ;; also, look through
 
-  (setq doom-modeline-height 1)
-  (setq doom-modeline-percent-position nil)
+;; original
+;; (doom-modeline-def-modeline 'main
+;; '(eldoc bar workspace-name window-number modals matches follow buffer-info remote-host buffer-position word-count parrot selection-info)
+;; '(compilation objed-state misc-info persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding major-mode process vcs checker time))
 
-  (buffer-local-value 'mode-line-format (current-buffer))
+  ;; look
+  ;; got rid of lsp, modals, repl, buffer-encoding, major-mode, checker
+  (doom-modeline-def-modeline 'kev-main-modeline
+      '(eldoc bar workspace-name window-number matches follow buffer-info remote-host buffer-position word-count parrot selection-info)
+      '(compilation objed-state misc-info persp-name battery grip irc mu4e gnus github debug lsp minor-modes input-method indent-info process vcs))
 
-;; got rid of lsp, major-mode, misc-info
-  (doom-modeline-def-modeline 'main
-    '(bar window-number matches buffer-info remote-host buffer-position word-count parrot selection-info)
-    '(persp-name grip irc mu4e gnus debug repl minor-modes input-method indent-info process vcs)))
+  (add-hook! 'doom-modeline-mode-hook
+    (doom-modeline-set-modeline 'kev-main-modeline 'default))
+  )
 #+end_src
+
 
 and make multi-term use it
 
@@ -347,8 +378,6 @@ in `input' to get back edits made by the model"
  "k" 'kevin-paredit-mode)
 #+end_src
 
-#+RESULTS:
-
 * General Setup
 ** utility functions
 #+begin_src elisp
@@ -480,8 +509,6 @@ in `input' to get back edits made by the model"
       (message "Copied buffer file name '%s' to the clipboard." filename))))
 #+end_src
 
-#+RESULTS:
-: copy-file-name-to-clipboard
 
 ** Keybindings
 #+begin_src elisp
@@ -551,9 +578,6 @@ in `input' to get back edits made by the model"
 
 #+end_src
 
-#+RESULTS:
-| emacs-lisp-checkdoc |
-
 line numbers
 
 #+begin_src elisp
@@ -594,9 +618,6 @@ line numbers
     (:around (orig-fun &rest _) doom-modeline-advice)
   (funcall kev-cached-modeline-buffer-file-state))
 #+end_src
-
-#+RESULTS:
-: doom-modeline-update-buffer-file-state-icon@doom-modeline-advice
 
 ** Project management
 *** git
@@ -687,6 +708,7 @@ org-roam setup and shortcuts
     - parents are found by just finding all ids that appear in a :subnode_of:
     - have to change regular finds to ignore subnodes now
   - TODO
+    - allow for multiple subnode_of entries so you can "file" something under two things??
     - make roam buffer section for subnodes
 
 #+begin_src elisp

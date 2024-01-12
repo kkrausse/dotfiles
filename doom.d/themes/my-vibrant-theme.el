@@ -2,30 +2,30 @@
 (require 'doom-themes)
 
 ;;
-(defgroup doom-vibrant-theme nil
+(defgroup kev-doom-vibrant-theme nil
   "Options for doom-themes"
   :group 'doom-themes)
 
-(defcustom doom-vibrant-brighter-modeline nil
+(defcustom kev-doom-vibrant-brighter-modeline nil
   "If non-nil, more vivid colors will be used to style the mode-line."
-  :group 'doom-vibrant-theme
+  :group 'kev-doom-vibrant-theme
   :type 'boolean)
 
-(defcustom doom-vibrant-brighter-comments nil
+(defcustom kev-doom-vibrant-brighter-comments nil
   "If non-nil, comments will be highlighted in more vivid colors."
-  :group 'doom-vibrant-theme
+  :group 'kev-doom-vibrant-theme
   :type 'boolean)
 
-(defcustom doom-vibrant-comment-bg doom-vibrant-brighter-comments
+(defcustom kev-doom-vibrant-comment-bg kev-doom-vibrant-brighter-comments
   "If non-nil, comments will have a subtle, darker background. Enhancing their
 legibility."
-  :group 'doom-vibrant-theme
+  :group 'kev-doom-vibrant-theme
   :type 'boolean)
 
-(defcustom doom-vibrant-padded-modeline doom-themes-padded-modeline
+(defcustom kev-doom-vibrant-padded-modeline doom-themes-padded-modeline
   "If non-nil, adds a 4px padding to the mode-line. Can be an integer to
 determine the exact padding."
-  :group 'doom-vibrant-theme
+  :group 'kev-doom-vibrant-theme
   :type '(choice integer boolean))
 
 
@@ -67,7 +67,7 @@ determine the exact padding."
    (vertical-bar   base0)
    (selection      dark-blue)
    (builtin        magenta)
-   (comments       (if doom-vibrant-brighter-comments dark-cyan base5))
+   (comments       (if kev-doom-vibrant-brighter-comments dark-cyan base5))
    (doc-comments   (doom-lighten dark-cyan 0.15));; (if doom-vibrant-brighter-comments (doom-lighten dark-cyan 0.15) (doom-lighten base4 0.3)))
    (constants      violet)
    (keywords       orange)
@@ -148,7 +148,7 @@ determine the exact padding."
 
    (font-lock-comment-face
     :foreground comments
-    :background (if doom-vibrant-comment-bg (doom-darken bg-alt 0.095)))
+    :background (if kev-doom-vibrant-comment-bg (doom-darken bg-alt 0.095)))
    (font-lock-doc-face
     :inherit 'font-lock-comment-face
     :foreground doc-comments)
@@ -168,7 +168,7 @@ determine the exact padding."
     :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,(doom-darken blue 0.7)))
     :height 0.9)
    (mode-line-emphasis
-    :foreground (if doom-vibrant-brighter-modeline base8 highlight))
+    :foreground (if kev-doom-vibrant-brighter-modeline base8 highlight))
 
 
    (whitespace-empty :background bg)
