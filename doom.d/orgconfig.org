@@ -631,17 +631,65 @@ line numbers
 #+end_src
 
 * Lang
-** org
+** org babel
 #+begin_src elisp
-
-
 ;; org babel stuff
 (after! org
+  (require 'ob-clojure)
+  (setq org-babel-clojure-backend 'cider)
+
   (add-to-list 'org-babel-default-header-args
              '(python . (:results . "output"))))
 
+(defvar-local kev-cider-session nil)
+
+(defun kev/select-option (prompt alist)
+  (require 'ivy)
+  (cdr
+   (assoc (ivy-read prompt alist :require-match t)
+          alist)))
+
+(defun kev/select-session ()
+  (require 'ivy)
+  (let* ((sessions (cider-sessions))
+         (_ (unless sessions (error "no repl sessions found! start one first")))
+         (session (if (member kev-cider-session sessions)
+                      kev-cider-session
+                    (setq kev-cider-session
+                          (if (cdr sessions)
+                              (kev/select-option
+                               "pick session: "
+                               (seq-map
+                                (lambda (sesh)
+                                  (cons (buffer-name (cadr sesh))
+                                        (cadr sesh)))
+                                sessions))
+                            (setq kev-cider-session (cadar sessions)))))))
+    session))
+
+(after! ob-clojure
+  (defun org-babel-execute:clojure (body params)
+    "Execute a block of Clojure code with Babel and nREPL."
+    (require 'cider)
+
+    (setq kev-cider-session nil)
+
+    (let* ((session (kev/select-session))
+           (response (cider-nrepl-sync-request:eval
+                      (org-babel-expand-body:clojure body params)
+                      session)))
+      (nrepl-dbind-response response (out status)
+        (print
+         (list "cider session:" session
+               "params:" params
+               "result" response))
+        out))))
+#+end_src
+
+** org
+#+begin_src elisp
 (after! org
-  (define-key org-mode-map (kbd "C-c f") #'org-babel-execute-src-block)
+  ;;(define-key org-mode-map (kbd "C-c f") #'org-babel-execute-src-block)
 
 ;; Including =org-tempo= restores the =<s=-style easy-templates that were
 ;; deprecated in Org 9.2.
@@ -797,13 +845,16 @@ org-roam setup and shortcuts
 ;; TODO do the file resize thing and visual line mode
 ;; to org roam dir
 ;; org roam to display in same window
-    
 (add-to-list 'display-buffer-alist '("\\*org-roam.*\\*" . (display-buffer-reuse-window display-buffer-same-window)))
 (add-to-list 'display-buffer-alist '("\\*lsp-help\\*" . (display-buffer-reuse-window display-buffer-same-window)))
 
 
 ;; map org roam everywhere to these autoloads
 (map! (:prefix ("C-c n" . "Org Roam")
+               (:prefix ("s" . "sub-node")
+                        "i" #'kev/roam-subnode-insert
+                        "c" #'kev/roam-subnode-create
+                        "f" #'kev/roam-subnode-find)
                ;; "f" #'org-roam-node-find
                "f" (cons "find node" #'kev/roam-subnode-find-non-subnodes)
                "d" #'org-roam-dailies-find-directory))
