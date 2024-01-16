@@ -509,7 +509,6 @@ in `input' to get back edits made by the model"
       (message "Copied buffer file name '%s' to the clipboard." filename))))
 #+end_src
 
-
 ** Keybindings
 #+begin_src elisp
 ;; sets comma as spc m
@@ -821,6 +820,7 @@ org-roam setup and shortcuts
 
 (defun kev/roam-subnode-find ()
   (interactive)
+  (require 'org-roam-node)
   (let ((pnode (kev/roam-subnode-find-parent)))
     (org-roam-node-visit
      (org-roam-node-read nil
@@ -1306,7 +1306,6 @@ cider configs
 for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#indentation-of-macro-forms][clojure mode docs]] and at [[https://docs.cider.mx/cider/indent_spec.html][cider docs]]
 
 #+begin_src elisp
-
 (add-hook! 'lsp-mode-hook
 
            (lsp-ui-mode 1)
@@ -1314,6 +1313,7 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
            ;; (evil-set-command-property 'evil-ex-search-next :jump nil)
            ;; (evil-set-command-property 'evil-ex-search-backward :jump nil)
            (map! :map lsp-command-map
+                 ;; TODO maybe prefix will fix lack of docs
                  "gb" #'xref-go-back
                  "gf" #'xref-go-forward
                  "d" #'lsp-ui-doc-glance)
@@ -1321,9 +1321,11 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
 
            (lsp-diagnostics-mode 0)
 
+           ;; TODO
+           ;; look at lsp--default-directory-for-connection
+           ;; how to lsp thing is set up and where it gets the config
            (setq lsp-ui-doc-position 'at-point
                  lsp-enable-symbol-highlighting 't
-
                  ;; perf stuff
                  lsp-file-watch-threshold 10000
                  gc-cons-threshold (* 100 1024 1024)
@@ -1340,6 +1342,14 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
 
                  ;; change to locally do clojure lsp
                  lsp-clojure-custom-server-command '("zsh" "-c" "clojure-lsp")
+
+                 ;;;; Xref / definition stuff
+                 lsp-references-exclude-definition 't
+                 ;; will treat everything as definition
+                 lsp-xref-force-references 't
+                 ;; Don't do this. it ignores multiples
+                 xref-auto-jump-to-first-definition nil
+                 xref-show-definitions-function 'xref-show-definitions-buffer-at-bottom
 
                  ;; ikd this was here before
                  cider-eldoc-display-for-symbol-at-point nil ;; disable cider eldoc
