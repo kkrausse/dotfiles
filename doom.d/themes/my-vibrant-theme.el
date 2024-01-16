@@ -53,6 +53,7 @@ determine the exact padding."
    (red        '("#ed5147" "#ff6655" ))
    (orange     '("#e69055" "#dd8844" ))
    (green      '("#3bd188" "#99bb66" ))
+   (dark-green '("#01753b" "#01753b" ))
    (teal       '("#4db5bd" "#44b9b1" ))
    (yellow     '("#FCCE7B"           ))
    (blue       '("#51afef"           ))
@@ -67,15 +68,15 @@ determine the exact padding."
    (vertical-bar   base0)
    (selection      dark-blue)
    (builtin        magenta)
-   (comments       (if kev-doom-vibrant-brighter-comments dark-cyan base5))
-   (doc-comments   (doom-lighten dark-cyan 0.15));; (if doom-vibrant-brighter-comments (doom-lighten dark-cyan 0.15) (doom-lighten base4 0.3)))
+   (comments       (doom-darken dark-cyan 0.1)) ;; was base5
+   (doc-comments   teal)
    (constants      violet)
    (keywords       orange)
    (functions      blue)
-   (methods        blue)
-   (operators      blue)
+   (methods        cyan)
+   (operators      blue) ;; was blue
    (type           (doom-darken yellow 0.1))
-   (strings        green)
+   (strings        (doom-darken green 0.1))
    (variables      teal)
    (numbers        orange)
    (region         base4)
@@ -123,7 +124,7 @@ determine the exact padding."
 
    ;;;;;;;; Editor ;;;;;;;;
    (cursor :background fg-alt)
-   (hl-line :background bg-alt)
+   (hl-line :background (doom-darken red 0.7))
 
    ;;;;;;;; Brackets ;;;;;;;;
    ;; Rainbow-delimiters
@@ -202,6 +203,35 @@ determine the exact padding."
    (smerge-lower :inherit 'diff-added)
    ;; (magit-diff-base :background "darkgreen")
 
+   ;; stolen from doom-solarized-dark-high
+   ;; emacs/.local/straight/repos/themes/themes/doom-solarized-dark-high-contrast-theme.el
+   ;;
+   ((font-lock-keyword-face &override)  :weight 'bold)
+   ((font-lock-constant-face &override) :weight 'bold)
+   ((font-lock-type-face &override)     :slant 'italic)
+   ((font-lock-builtin-face &override)  :slant 'italic)
+
+   ;;;; outline (affects org-mode)
+   ((outline-1 &override) :foreground blue)
+   ((outline-2 &override) :foreground (doom-darken green 0.1))
+   ((outline-3 &override) :foreground teal)
+   ((outline-4 &override) :foreground (doom-darken blue 0.2))
+   ((outline-5 &override) :foreground (doom-darken green 0.2))
+   ((outline-6 &override) :foreground (doom-darken teal 0.2))
+   ((outline-7 &override) :foreground (doom-darken blue 0.4))
+   ((outline-8 &override) :foreground (doom-darken green 0.4))
+   ;;;; org <built-in>
+   ((org-block &override) :background (doom-darken blue 0.8))
+   ((org-block-begin-line &override) :foreground comments :background (doom-darken blue 0.8))
+   ;;;; vterm
+   (vterm-color-black   :background (doom-lighten base0 0.75)   :foreground base0)
+   (vterm-color-red     :background (doom-lighten red 0.75)     :foreground red)
+   (vterm-color-green   :background (doom-lighten green 0.75)   :foreground green)
+   (vterm-color-yellow  :background (doom-lighten yellow 0.75)  :foreground yellow)
+   (vterm-color-blue    :background (doom-lighten blue 0.75)    :foreground blue)
+   (vterm-color-magenta :background (doom-lighten magenta 0.75) :foreground magenta)
+   (vterm-color-cyan    :background (doom-lighten cyan 0.75)    :foreground cyan)
+   (vterm-color-white   :background (doom-lighten base8 0.75)   :foreground base8)
 
    ;(default ((t (:background "black"))))
    ;(default :background bg)
