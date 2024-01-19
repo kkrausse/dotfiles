@@ -1062,15 +1062,27 @@ for skewer, like a repl type thing for js
 
 ** python
 #+begin_src elisp
-;; NOTE you have to call this manually
-(add-hook! 'elpy-mode-hook
-  (map! :map elpy-mode-map
+
+(defvar kev-remote-shell-interpreter "/home/kkrausse/bin/conda_python.sh"
+  "no spaces allowed! a restriction of python.el")
+
+;; NOTE: may have to look back into run-python to see if I need to enable remote local variables or something
+(defun kev/python-remote-shell ()
+  (interactive)
+    (with-current-buffer (find-file-noselect "/ssh:kkrausse@diesel2:/home/kkrausse/repos/kkrausse/memory-mistral")
+      (with-connection-local-variables
+       (print (list "current buffer " (current-buffer)
+                    (find-file-noselect "/ssh:kkrausse@diesel2:/home/kkrausse/repos/kkrausse/memory-mistral")
+                    (pwd)))
+       (run-python kev-remote-shell-interpreter))))
+
+(after! python
+  (map! :map python-mode-map
         :localleader
         (:prefix ("e" . "Eval")
-                 "b" #'elpy-shell-send-region-or-buffer
-                 "r" #'elpy-shell-send-region-or-buffer
-                 "d" #'elpy-shell-send-top-statement))
-  (pyvenv-activate (concat (projectile-project-root) ".venv")))
+                 "b" #'python-shell-send-buffer
+                 "r" #'python-shell-send-region
+                 "d" #'python-shell-send-defun)))
 #+end_src
 
 #+RESULTS:
