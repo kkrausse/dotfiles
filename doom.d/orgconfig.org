@@ -1076,13 +1076,30 @@ for skewer, like a repl type thing for js
                     (pwd)))
        (run-python kev-remote-shell-interpreter))))
 
+(defun kev/python-shell-send-toplevel ()
+  (interactive)
+  (let ((start (point)))
+    (save-excursion
+      (python-shell-send-region
+       (progn (end-of-line)
+              (while (> (current-indentation) 0)
+                (python-nav-backward-statement))
+              (beginning-of-line)
+              (point-marker))
+       (progn (goto-char start)
+              (evil-next-line)
+              (while (> (current-indentation) 0)
+                (python-nav-forward-statement))
+              (beginning-of-line)
+              (point-marker))))))
+
 (after! python
   (map! :map python-mode-map
         :localleader
         (:prefix ("e" . "Eval")
                  "b" #'python-shell-send-buffer
                  "r" #'python-shell-send-region
-                 "d" #'python-shell-send-defun)))
+                 "d" #'kev/python-shell-send-toplevel)))
 #+end_src
 
 #+RESULTS:
