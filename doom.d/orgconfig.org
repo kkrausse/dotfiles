@@ -1063,18 +1063,31 @@ for skewer, like a repl type thing for js
 ** python
 #+begin_src elisp
 
-(defvar kev-remote-shell-interpreter "/home/kkrausse/bin/conda_python.sh"
+(defvar kev/py-shell-interpreter "python3"
   "no spaces allowed! a restriction of python.el")
+
+(defvar kev/py-shell-dir "/ssh:kkrausse@diesel2:/home/kkrausse/repos/kkrausse/memory-mistral")
+
+;; (add-to-list 'display-buffer-alist '("\\*org-roam.*\\*" . (display-buffer-reuse-window display-buffer-same-window)))
 
 ;; NOTE: may have to look back into run-python to see if I need to enable remote local variables or something
 (defun kev/python-remote-shell ()
   (interactive)
-    (with-current-buffer (find-file-noselect "/ssh:kkrausse@diesel2:/home/kkrausse/repos/kkrausse/memory-mistral")
-      (with-connection-local-variables
-       (print (list "current buffer " (current-buffer)
-                    (find-file-noselect "/ssh:kkrausse@diesel2:/home/kkrausse/repos/kkrausse/memory-mistral")
-                    (pwd)))
-       (run-python kev-remote-shell-interpreter))))
+  (with-current-buffer (find-file-noselect kev/py-shell-dir)
+    (with-connection-local-variables
+     (message (concat "opening python shell in"
+                      kev/py-shell-dir
+                      " with "
+                      kev/py-shell-interpreter
+                      " in buffer "
+                      (buffer-name)))
+     (run-python kev-remote-shell-interpreter)))
+  (display-buffer (python-shell-get-buffer)
+                  '(display-buffer-reuse-window)))
+
+
+;; FIXME: this doesn't work when there's like empty spaces in the function sometimes?
+;; I think it has to do with which line you start on, not with the nav-...-statement stuff
 
 (defun kev/python-shell-send-toplevel ()
   (interactive)
@@ -1082,6 +1095,7 @@ for skewer, like a repl type thing for js
     (save-excursion
       (python-shell-send-region
        (progn (end-of-line)
+              (python-nav-beginning-of-statement)
               (while (> (current-indentation) 0)
                 (python-nav-backward-statement))
               (beginning-of-line)
@@ -1091,14 +1105,34 @@ for skewer, like a repl type thing for js
               (while (> (current-indentation) 0)
                 (python-nav-forward-statement))
               (beginning-of-line)
-              (point-marker))))))
+              (min (buffer-end 1)
+                   (point-marker)))))))
+
+(defun kev/python-shell-send-paragraph()
+  (interactive)
+  (let ((start (point)))
+    (save-excursion
+      (python-shell-send-region
+       (progn (backward-paragraph)
+              (max 0
+                   (point-marker)))
+       (progn (goto-char start)
+              (forward-paragraph)
+              (min (buffer-end 1)
+                   (point-marker)))))))
 
 (after! python
   (map! :map python-mode-map
         :localleader
+        "'" #'kev/python-remote-shell
         (:prefix ("e" . "Eval")
                  "b" #'python-shell-send-buffer
-                 "r" #'python-shell-send-region
+                 "r" (cons "region or paragraph"
+                      (lambda (start end)
+                        (interactive (list (region-beginning) (region-end)))
+                        (if (region-active-p)
+                            (python-shell-send-region start end)
+                          (kev/python-shell-send-paragraph))))
                  "d" #'kev/python-shell-send-toplevel)))
 #+end_src
 
