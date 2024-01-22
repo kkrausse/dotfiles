@@ -340,6 +340,9 @@ in `input' to get back edits made by the model"
             (lsp-format-region (region-beginning) (region-end))
             (pop-mark))))
   ;; parens
+  "\"" (lambda ()
+         (interactive)
+         (sp-wrap-with-pair "\""))
   "[" 'sp-wrap-square
   "{" 'sp-wrap-curly
   "w" 'sp-wrap-round
