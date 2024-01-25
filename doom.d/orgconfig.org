@@ -50,8 +50,8 @@ notes:
   ;; something wrong with the config I think
   (global-company-mode -1)
 
-  (add-hook! 'org-mode-hook
-    (setq company-idle-delay 0.9))
+  ;; (add-hook! 'org-mode-hook
+  ;;   (setq company-idle-delay 0.5))
 
   (setq company-idle-delay 0.5)
   (company-mode-on)
@@ -299,7 +299,7 @@ in `input' to get back edits made by the model"
                   (apply 'make-openai-request $)))))))
 
 #+end_src
-** kevin paredit!
+** paredit
 
 #+begin_src elisp
 (define-minor-mode kevin-paredit-mode
@@ -382,6 +382,16 @@ in `input' to get back edits made by the model"
 #+end_src
 
 * General Setup
+** remote shells
+#+begin_src elisp
+
+;; see https://www.gnu.org/software/tramp/#Relevant-connection-properties-to-override
+;; and (tramp-methods)
+(after! tramp
+  (add-to-list 'tramp-connection-properties
+               (list (regexp-quote "/ssh:kkrausse@diesel2:")
+                     "remote-shell" "/usr/bin/zsh")))
+#+end_src
 ** utility functions
 #+begin_src elisp
 (defmacro kev-setq-local (&rest kvs)
@@ -633,6 +643,60 @@ line numbers
 #+end_src
 
 * Lang
+** org
+#+begin_src elisp
+(after! org
+  ;;(define-key org-mode-map (kbd "C-c f") #'org-babel-execute-src-block)
+
+;; Including =org-tempo= restores the =<s=-style easy-templates that were
+;; deprecated in Org 9.2.
+  (require 'org-tempo)
+
+  ;; start everything folded
+  (setq org-startup-folded 't)
+;; code blocks font
+  (setq org-src-fontify-natively t)
+  (setq org-src-tab-acts-natively t))
+
+(defun is-file-in-subdirectory (subdir)
+  "Check if the current buffer's file is in a specified SUBDIR."
+  (let ((current-file (buffer-file-name)))
+    (when current-file
+      (string-prefix-p (expand-file-name subdir)
+                       (expand-file-name current-file)))))
+
+(after! org
+  (map! :map evil-org-mode-map
+        :m "C-k" #'evil-previous-visual-line
+        :m "C-j" #'evil-next-visual-line
+        :m "gj" #'evil-next-visual-line
+        :m "gk" #'evil-previous-visual-line
+        :localleader
+        "'"  #'org-edit-special
+        (:prefix "g" "b" #'org-mark-ring-goto)))
+
+;; remove pcomplete from org-mode
+(add-hook! org-mode :append
+  (setq company-backends
+        '(company-capf
+          (:separate company-yasnippet company-ispell))
+        )
+           ;; (setq-local completion-at-point-functions
+           ;;             (remove 'pcomplete-completions-at-point completion-at-point-functions))
+           )
+;; general org settings
+;; makes a clearer distinction between sub-bullets
+(use-package! org-bullets-mode
+  :hook org-mode)
+#+end_src
+
+wat?
+
+#+begin_src elisp
+(defun kev/org-archive-subtree
+  (org-copy-subtree))
+#+end_src
+
 ** org babel
 #+begin_src elisp
 ;; org babel stuff
@@ -688,69 +752,11 @@ line numbers
         out))))
 #+end_src
 
-** org
-#+begin_src elisp
-(after! org
-  ;;(define-key org-mode-map (kbd "C-c f") #'org-babel-execute-src-block)
-
-;; Including =org-tempo= restores the =<s=-style easy-templates that were
-;; deprecated in Org 9.2.
-  (require 'org-tempo)
-
-  ;; start everything folded
-  (setq org-startup-folded 't)
-;; code blocks font
-  (setq org-src-fontify-natively t)
-  (setq org-src-tab-acts-natively t))
-
-(defun is-file-in-subdirectory (subdir)
-  "Check if the current buffer's file is in a specified SUBDIR."
-  (let ((current-file (buffer-file-name)))
-    (when current-file
-      (string-prefix-p (expand-file-name subdir)
-                       (expand-file-name current-file)))))
-
-;; general org settings
-(after! org
-  (map! :map evil-org-mode-map
-        :m "C-k" #'evil-previous-visual-line
-        :m "C-j" #'evil-next-visual-line
-        :m "gj" #'evil-next-visual-line
-        :m "gk" #'evil-previous-visual-line
-        :localleader
-        "'"  #'org-edit-special
-        (:prefix "g" "b" #'org-mark-ring-goto)))
-
-(defun kev-set-visual-columns ()
-  (visual-line-mode 1)
-  (visual-fill-column-mode 1)
-  (after! visual-fill-column
-    (setq visual-fill-column-width 80
-          ;; idk if I like this yet
-          visual-fill-column-center-text nil)))
-
-(add-hook! 'org-mode-hook :append
-           ;; org roam should fix column width!
-  (after! org-roam
-    (when (is-file-in-subdirectory org-roam-directory)
-      (kev-set-visual-columns))))
-
-;; makes a clearer distinction between sub-bullets
-(use-package! org-bullets-mode
-  :hook org-mode)
-#+end_src
-
-wat?
-
-#+begin_src elisp
-(defun kev/org-archive-subtree
-  (org-copy-subtree))
-#+end_src
-
 ** org-roam
 
 org-roam setup and shortcuts
 
+*** subnodes
 - subnode extention
   - problem statement: explosion of one flat directory is untenable especially when you want to look for something within a specific directory. Still want to preserve roam's ultimate freedom and linking though.
   - implementation
@@ -858,9 +864,8 @@ org-roam setup and shortcuts
                         "i" #'kev/roam-subnode-insert
                         "c" #'kev/roam-subnode-create
                         "f" #'kev/roam-subnode-find)
-               ;; "f" #'org-roam-node-find
                "f" (cons "find node" #'kev/roam-subnode-find-non-subnodes)
-               "d" #'org-roam-dailies-find-directory))
+               "d" #'org-roam-dailies-goto-today))
 
 (after! org-roam
 
@@ -873,9 +878,8 @@ org-roam setup and shortcuts
                        "c" #'org-id-get-create
                        "i" (cons "insert node link"
                                  '(lambda ()
-                                   (interactive)
-                                   (funcall #'org-roam-node-insert (kev/complement #'kev/roam-subnode-get-parent)))
-                                 )
+                                    (interactive)
+                                    (funcall #'org-roam-node-insert (kev/complement #'kev/roam-subnode-get-parent))))
                        "r" '("org-roam-buffer-display-dedicated" .
                              (lambda ()
                                (interactive)
@@ -883,26 +887,9 @@ org-roam setup and shortcuts
                                ;; number `1' is not specific here
                                (setq current-prefix-arg '(1))
                                (call-interactively #'org-roam-buffer-display-dedicated)))
-                       "d" #'org-roam-db-sync
+                       "d" #'org-roam-dailies-goto-today
                        "a" #'org-roam-alias-add)))
 
-  ;; makes it so you can see if something is a subnode
-  ;; probably not needed anymore.
-  (cl-defmethod org-roam-node-kev-subnode-format ((node org-roam-node))
-    (let ((parent-node (thread-last node
-                                    (org-roam-node-properties)
-                                    (assoc-string "SUBNODE_OF")
-                                    (cdr)
-                                    (org-roam-node-from-id))))
-      (if parent-node
-          (concat (org-roam-node-kev-subnode-format parent-node) " -> " (org-roam-node-title node))
-        (org-roam-node-title node))))
-  (setq org-roam-node-display-template "${kev-subnode-format}")
-
-  (setq org-roam-dailies-directory "daily/")
-  ;; If you're using a vertical completion framework, you might want a more informative completion interface
-  ;; (setq org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
-  (org-roam-db-autosync-mode 1)
 
   ;; TODO: make this only go up a few levels of indentation rather than to zero.
   ;; should be pretty easy
@@ -933,20 +920,91 @@ org-roam setup and shortcuts
   (add-hook! 'org-roam-mode-hook
     (kev-set-visual-columns))
 
+  (cl-defmethod org-roam-node-kev-subnode-format ((node org-roam-node))
+    "would be used in org-roam-node-display-template by setting it to \"${kev-subnode-format}\""
+    (let ((parent-node (thread-last node
+                                    (org-roam-node-properties)
+                                    (assoc-string "SUBNODE_OF")
+                                    (cdr)
+                                    (org-roam-node-from-id))))
+      (if parent-node
+          (concat (org-roam-node-title node) " parent: " (org-roam-node-title parent-node))
+        (org-roam-node-title node))))
+
+
+  ;; If you're using a vertical completion framework, you might want a more informative completion interface
+  ;; (setq org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
+  (org-roam-db-autosync-mode 1)
+
   ;; define some keys everywhere
   (setq org-roam-v2-ack t
+        org-roam-dailies-directory "daily/"
         org-roam-preview-function #'kev/org-roam-preview)
-
+        org-roam-node-display-template "${title}"
+        ;; this doesn't get called for some reason?
+        ;; I think ivy ignores it for some reason
+        ;; see `ivy-completing-read'?
+        org-roam-node-annotation-function (lambda ()
+                                            (message "calling annotation!")
+                                            (let ((parent-node (thread-last node
+                                                                            (org-roam-node-properties)
+                                                                            (assoc-string "SUBNODE_OF")
+                                                                            (cdr)
+                                                                            (org-roam-node-from-id))))
+                                              (if parent-node
+                                                  (concat "parent: " (org-roam-node-title parent-node))
+                                                "")))
+        ;; org-roam-node-formatter
+        ;; I'd imagine this could be used if we want to prefix titles of subnodes with parent.
+        ;; then when you insert the node, you'd undo the prefix when inserting.
+        ;; then you don't have to worry about having super generic titles
   )
 
+#+end_src
+
+*** general setup
+#+begin_src elisp
+(defun kev-set-visual-columns ()
+  (visual-line-mode 1)
+  (visual-fill-column-mode 1)
+  (after! visual-fill-column
+    (setq visual-fill-column-width 80
+          ;; idk if I like this yet
+          visual-fill-column-center-text nil)))
+
+(add-hook! 'org-mode-hook :append
+           ;; org roam should fix column width!
+  (after! org-roam
+    (when (is-file-in-subdirectory org-roam-directory)
+      (kev-set-visual-columns))))
+
 (use-package! org-roam
-  :after org
-  ;; this would load it during idle time
-  ;; :defer-incrementally org
+  ;; :after org
+  ;; this loads eagerly. The following would load it during idle time
+  :defer-incrementally org
   ;; :commands (org-roam-node-find org-roam-node-insert)
   )
 #+end_src
+** org-ref
+#+begin_src elisp
+(setq bibtex-completion-bibliography '("~/Desktop/bibliography/refs.bib")
+      ;; NOTE needs the trailing slash! idk why the fudge
+    bibtex-completion-library-path '("~/Desktop/bibliography/pdfs/")
 
+    bibtex-completion-additional-search-fields '(keywords)
+    ;; bibtex-completion-display-formats
+    ;; '((article       . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*} ${journal:40}")
+    ;;     (inbook        . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*} Chapter ${chapter:32}")
+    ;;     (incollection  . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*} ${booktitle:40}")
+    ;;     (inproceedings . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*} ${booktitle:40}")
+    ;;     (t             . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*}"))
+    )
+(use-package! org-ref
+  :after org)
+
+(use-package! org-ref-ivy
+  :after org-ref)
+#+end_src
 ** rust
 
 #+begin_src elisp
@@ -993,13 +1051,22 @@ org-roam setup and shortcuts
 ;; gotos
 (use-package! elisp-slime-nav
   :defer-incrementally (elisp-mode ielm))
+(after! elisp-slime-nav
+  (turn-on-elisp-slime-nav-mode))
 
-(add-hook! (emacs-lisp-mode ielm-mode)
-    (turn-on-elisp-slime-nav-mode)
-    (map! :mode emacs-lisp-mode
-          :localleader
-          "gg" #'elisp-slime-nav-find-elisp-thing-at-point
-          "gb" #'pop-tag-mark))
+(defun kev/eval-to-comment ()
+  (interactive)
+  (let ((value (eval (preceding-sexp))))
+    (sp-end-of-sexp)
+    (forward-char)
+    (insert (format "\n;; => %S" value))))
+
+;; (add-hook! (emacs-lisp-mode ielm-mode))
+(map! :mode emacs-lisp-mode
+      :localleader
+      "e;" #'kev/eval-to-comment
+      "gg" #'elisp-slime-nav-find-elisp-thing-at-point
+      "gb" #'pop-tag-mark)
 #+end_src
 ** Ruby
 #+begin_src elisp
@@ -1016,8 +1083,9 @@ org-roam setup and shortcuts
 
 (remove-hook 'robe-mode-hook 'ac-robe-setup)
 
-(eval-after-load 'company
-  '(push 'company-robe company-backends))
+(add-hook! 'ruby-mode-hook
+  (after! company
+    (push 'company-robe company-backends)))
 #+end_src
 
 #+RESULTS:
@@ -1076,38 +1144,74 @@ for skewer, like a repl type thing for js
 ;; NOTE: may have to look back into run-python to see if I need to enable remote local variables or something
 (defun kev/python-remote-shell ()
   (interactive)
-  (with-current-buffer (find-file-noselect kev/py-shell-dir)
-    (with-connection-local-variables
-     (message (concat "opening python shell in"
-                      kev/py-shell-dir
-                      " with "
-                      kev/py-shell-interpreter
-                      " in buffer "
-                      (buffer-name)))
-     (run-python kev-remote-shell-interpreter)))
+  (let ((shell-dir kev/py-shell-dir)
+        (py-interp kev/py-shell-interpreter))
+    (with-current-buffer (find-file-noselect shell-dir)
+      (with-connection-local-variables
+       (message (concat "opening python shell in\n"
+                        shell-dir
+                        "cmd:\n"
+                        py-interp))
+       (run-python py-interp))))
   (display-buffer (python-shell-get-buffer)
-                  '(display-buffer-reuse-window)))
+                  '(display-buffer-reuse-window
+                    display-buffer-use-least-recent-window)))
+
+
+(defun format-python-print (python-code)
+  "Format PYTHON-CODE as a Python print statement, properly escaping single quotes."
+  (let ((escaped-code (replace-regexp-in-string "'" "\\\\'" python-code)))
+    (format "print('''%s...''')" escaped-code)))
+
+(message "blah\ndee")
+(kev/comment
+ (print
+  (format-python-print
+   "print('what is this')")))
+
+(defun kev/python-shell-send-string (body)
+  (require 'ob-python)
+  (let ((body
+         (format "\
+%s
+%s
+"
+                 (format-python-print body)
+                body)))
+    (python-shell-send-string body))
+
+
+  ;; strategy of just writing to buffer kinda weird and doesn't print outputs
+  ;; (with-current-buffer (python-shell-get-buffer)
+  ;;   (end-of-buffer)
+  ;;   (insert body)
+  ;;   (comint-send-input))
+  )
+
+(defun kev/python-shell-send-region (start end)
+  (kev/python-shell-send-string (buffer-substring-no-properties start end)))
+
+
 
 
 ;; FIXME: this doesn't work when there's like empty spaces in the function sometimes?
 ;; I think it has to do with which line you start on, not with the nav-...-statement stuff
-
 (defun kev/python-shell-send-toplevel ()
   (interactive)
   (let ((start (point)))
     (save-excursion
-      (python-shell-send-region
-       (progn (end-of-line)
-              (python-nav-beginning-of-statement)
+      (kev/python-shell-send-region
+       (progn (python-nav-beginning-of-statement)
               (while (> (current-indentation) 0)
                 (python-nav-backward-statement))
-              (beginning-of-line)
               (point-marker))
        (progn (goto-char start)
-              (evil-next-line)
+              (python-nav-forward-statement)
               (while (> (current-indentation) 0)
                 (python-nav-forward-statement))
-              (beginning-of-line)
+              ;; in case you're at the end of the buffer
+              (python-nav-backward-statement)
+              (python-nav-end-of-statement)
               (min (buffer-end 1)
                    (point-marker)))))))
 
@@ -1115,19 +1219,29 @@ for skewer, like a repl type thing for js
   (interactive)
   (let ((start (point)))
     (save-excursion
-      (python-shell-send-region
+      (kev/python-shell-send-region
+       ;;python-shell-send-region
        (progn (backward-paragraph)
-              (max 0
-                   (point-marker)))
+              (forward-char)
+              (python-nav-beginning-of-statement))
        (progn (goto-char start)
               (forward-paragraph)
+              (backward-char)
+              (python-nav-end-of-statement)
               (min (buffer-end 1)
                    (point-marker)))))))
 
 (after! python
+  (setq python-shell-prompt-detect-failure-warning nil))
+
+(add-hook! 'python-mode-hook
   (map! :map python-mode-map
         :localleader
         "'" #'kev/python-remote-shell
+        (:prefix ("r" . "repl")
+                 "q" (cons "quit"
+                           (lambda () (interactive)
+                             (kev/python-shell-send-string "quit()"))))
         (:prefix ("e" . "Eval")
                  "b" #'python-shell-send-buffer
                  "r" (cons "region or paragraph"

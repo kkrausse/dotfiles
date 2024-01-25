@@ -56,20 +56,28 @@ determine the exact padding."
    (dark-green '("#01753b" "#01753b" ))
    (teal       '("#4db5bd" "#44b9b1" ))
    (yellow     '("#FCCE7B"           ))
-   (blue       '("#51afef"           ))
+   (blue       '("#7A7AFF"           ))
    (dark-blue  '("#1f5582"           ))
    (magenta    '("#db7b9e"           ))
    (violet     '("#d481d0"           )) ;a9a1e1
    (cyan       '("#5cEfFF"           ))
    (dark-cyan  '("#6A8FBF"           ))
 
+   ;; remoinder that color wheel is:
+   ;; rgb
+   ;; yellow = r + g
+   ;; cyan = g + b
+   ;; magenta = r + b
+   ;;
+   ;; r-g colorblind means focus on the blue-yellow axis more
+   ;;
    ;; face categories
    (highlight      blue)
    (vertical-bar   base0)
    (selection      dark-blue)
    (builtin        magenta)
    (comments       (doom-darken dark-cyan 0.1)) ;; was base5
-   (doc-comments   teal)
+   (doc-comments   magenta)
    (constants      violet)
    (keywords       orange)
    (functions      blue)
@@ -160,6 +168,17 @@ determine the exact padding."
    (doom-modeline-bar :background modeline-bg)
    (doom-modeline-buffer-path :foreground base8 :bold bold)
 
+   ;; omg this was such a pita
+   ((orderless-match-face-0 &override) :foreground base1)
+   ((orderless-match-face-1 &override) :foreground base1)
+   ((orderless-match-face-2 &override) :foreground base1)
+   ((orderless-match-face-3 &override) :foreground base1)
+   (custom-modified :foreground red :background yellow)
+   (custom-modified :foreground red :background yellow)
+   ((custom-modified &override) :foreground red :background (doom-blend blue bg 0.5))
+   ((completions-common-part &override) :background red :inherit 'evil-ex-lazy-highlight)
+   ((completions-first-difference &override) :background red :inherit 'evil-ex-lazy-highlight)
+  ;;  (evil-ex-lazy-highlight :background (doom-darken cyan 0.3) :inherit 'shadow)
    (mode-line
     :background modeline-bg :foreground modeline-fg
     :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,(doom-darken blue 0.6)))

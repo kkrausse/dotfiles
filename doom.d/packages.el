@@ -97,11 +97,16 @@
 
 ;; navigation?
 (package! elisp-slime-nav)
-(package! eldoc)
 (package! zoom)
 (package! smartparens)
 (package! aggressive-indent-mode)
 (package! evil-smartparens)
+
+;; for bibtex references
+(package! org-ref
+  :recipe (:type git
+           :host nil
+           :repo "https://github.com/jkitchin/org-ref.git" ))
 
 ;; You can override the recipe of a built in package without having to specify
 ;; all the properties for `:recipe'. These will inherit the rest of its recipe
