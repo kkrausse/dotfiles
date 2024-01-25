@@ -132,7 +132,7 @@ determine the exact padding."
 
    ;;;;;;;; Editor ;;;;;;;;
    (cursor :background fg-alt)
-   (hl-line :background (doom-darken red 0.7))
+   (hl-line :background (doom-darken orange 0.8))
 
    ;;;;;;;; Brackets ;;;;;;;;
    ;; Rainbow-delimiters

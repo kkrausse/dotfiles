@@ -675,15 +675,8 @@ line numbers
         "'"  #'org-edit-special
         (:prefix "g" "b" #'org-mark-ring-goto)))
 
-;; remove pcomplete from org-mode
-(add-hook! org-mode :append
-  (setq company-backends
-        '(company-capf
-          (:separate company-yasnippet company-ispell))
-        )
-           ;; (setq-local completion-at-point-functions
-           ;;             (remove 'pcomplete-completions-at-point completion-at-point-functions))
-           )
+(set-company-backend! 'text-mode '(company-yasnippet))
+
 ;; general org settings
 ;; makes a clearer distinction between sub-bullets
 (use-package! org-bullets-mode
