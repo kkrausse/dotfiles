@@ -1263,9 +1263,12 @@ nice keybindings
 (defun kevin-clojure-playbook (&optional output-to-current-buffer)
   "evaluate something from the playbook (w/ cider)"
   (interactive "P")
-  (let ((cmd (ivy-read "clj cmd: "
-                       kevin-clojure-playbook
-                       :history 'kevin-clojure-playbook)))
+  (let ((cmd (completing-read "clj cmd: "
+                              kevin-clojure-playbook
+                              nil
+                              t
+                              nil
+                              'kevin-clojure-playbook)))
     (cider-interactive-eval (cdr (assoc cmd kevin-clojure-playbook))
                             nil
                             (cider-defun-at-point 'bounds)
