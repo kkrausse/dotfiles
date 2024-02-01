@@ -78,7 +78,6 @@ determine the exact padding."
    (builtin        magenta)
    (comments       (doom-darken dark-cyan 0.1)) ;; was base5
    (doc-comments   magenta)
-   (constants      violet)
    (keywords       orange)
    (functions      blue)
    (methods        cyan)
@@ -86,7 +85,8 @@ determine the exact padding."
    (type           (doom-darken yellow 0.1))
    (strings        (doom-darken green 0.1))
    (variables      teal)
-   (numbers        orange)
+   (constants      violet)
+   (numbers        violet)
    (region         base4)
    (error          red)
    (warning        yellow)
@@ -149,6 +149,7 @@ determine the exact padding."
    ((show-paren-match &override) :foreground nil :background base5 :bold t)
    ((show-paren-mismatch &override) :foreground nil :background "red")
 
+   ((clojure-keyword-face &override) :foreground magenta :bold nil)
    ;; from
    (dired-directory :foreground cyan :background bg-alt)
    (dired-marked :foreground yellow)

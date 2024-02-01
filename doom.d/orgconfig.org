@@ -757,8 +757,12 @@ org-roam setup and shortcuts
     - parents are found by just finding all ids that appear in a :subnode_of:
     - have to change regular finds to ignore subnodes now
   - TODO
-    - allow for multiple subnode_of entries so you can "file" something under two things??
+    - allow for multiple subnode_of entries so you can "file" something under two things
     - make roam buffer section for subnodes
+    - allow todo items. have all things under a node cross-noted with TODO show up in the roam buffer
+    - hide sub nodes of sub nodes.
+      - you'd have recursive loop if there are more subnodes, or a defaulted selection of the node itself (maybe pretty printed somehow?).
+        Then it'd work for inserting / finding both nodes and subnodes.
 
 #+begin_src elisp
 ;; -*- lexical-binding: t; -*-
