@@ -757,12 +757,14 @@ org-roam setup and shortcuts
     - parents are found by just finding all ids that appear in a :subnode_of:
     - have to change regular finds to ignore subnodes now
   - TODO
-    - allow for multiple subnode_of entries so you can "file" something under two things
-    - make roam buffer section for subnodes
-    - allow todo items. have all things under a node cross-noted with TODO show up in the roam buffer
-    - hide sub nodes of sub nodes.
+    - [ ] make roam buffer section for subnodes
+    - [ ] allow todo items. have all things under a node cross-noted with TODO show up in the roam buffer
+    - [X] allow for multiple subnode_of entries so you can "file" something under two things
+    - [X] hide sub nodes when they have sub nodes.
       - you'd have recursive loop if there are more subnodes, or a defaulted selection of the node itself (maybe pretty printed somehow?).
         Then it'd work for inserting / finding both nodes and subnodes.
+      - should add the parent prefix so I can give no context titles. or just give no-context alias
+      - but then creating subnodes.. I guess could also use this flow bc it allows toplevel
 
 #+begin_src elisp
 ;; -*- lexical-binding: t; -*-
@@ -771,14 +773,20 @@ org-roam setup and shortcuts
   (lambda (&rest args)
     (not (apply 'funcall fn args))))
 
-(defun kev/roam-subnode-get-parent (node)
-  (thread-last node
-               (org-roam-node-properties)
-               (assoc-string "SUBNODE_OF")
-               (cdr)
-               (org-roam-node-from-id)))
+(defun kev/roam-subnode-get-parent-ids (node)
+  (let ((subnode-of-val (->> node
+                             (org-roam-node-properties)
+                             (assoc-string "SUBNODE_OF")
+                             (cdr))))
+      (when subnode-of-val
+          (->> subnode-of-val
+               (split-string)))))
 
-(defun kev/roam-subnode-get-parent-ids ()
+(defun kev/roam-subnode-get-parent (node)
+  "actually just gets the first parent id"
+  (car (kev/roam-subnode-get-parent-ids node)))
+
+(defun kev/roam-subnode-get-all-parent-ids ()
   (seq-reduce
    (lambda (ids node)
      (let ((subnode-of (thread-last node
@@ -793,7 +801,7 @@ org-roam setup and shortcuts
    nil))
 
 (defun kev/roam-subnode-find-parent ()
-  (let ((parent-ids (kev/roam-subnode-get-parent-ids)))
+  (let ((parent-ids (kev/roam-subnode-get-all-parent-ids)))
     (org-roam-node-read nil
                         (lambda (node)
                            (member (org-roam-node-id node) parent-ids))
@@ -803,23 +811,51 @@ org-roam setup and shortcuts
 
 (defun kev/roam-subnode-filter-subnodes (parent-node)
   (lambda (fnode)
-     (thread-last
-       fnode
-       (org-roam-node-properties)
-       (assoc-string "SUBNODE_OF")
-       (cdr)
-       (s-equals? (org-roam-node-id parent-node)))))
+    (member (org-roam-node-id parent-node)
+            (kev/roam-subnode-get-parent-ids fnode))))
 
 ;;;;;;;;;;;;;;;; main interface ;;;;;;;;;;;;;;;
 
+(defun kev/test ()
+  (interactive)
+  (print (org-entry-get nil "ITEM")))
+
+
+(defun kev/roam-subnode-find-non-subnodes ()
+  (interactive)
+  (funcall #'org-roam-node-find nil nil (kev/complement #'kev/roam-subnode-get-parent)))
+
+(defun kev/prn (&rest args)
+  (print args))
+
+(defun kev/roam-subnode-find-node (&optional current-node require-match)
+  (interactive (list nil))
+  (require 'org-roam-node)
+  (kev/prn  "got node" (when current-node (org-roam-node-title current-node)))
+  (if current-node
+      (let ((found (cl-remove-if-not
+                    (kev/roam-subnode-filter-subnodes current-node)
+                    (org-roam-node-list))))
+        (if (car found)
+            ;; if there are subnodes,
+            (let ((rnode
+                   (org-roam-node-read nil
+                                       (kev/roam-subnode-filter-subnodes current-node)
+                                       nil
+                                       require-match
+                                       )))
+              (if (org-roam-node-id rnode)
+                  (kev/roam-subnode-find-node rnode)
+                current-node))
+          current-node))
+    (kev/roam-subnode-find-node
+     (org-roam-node-read nil
+                         (kev/complement #'kev/roam-subnode-get-parent)))))
+
 (defun kev/roam-subnode-create ()
   (interactive)
-  (let ((parent (org-roam-node-read nil
-                                    ;; I have subnodes of subnodes so I can't do this lol
-                                    nil ;;(kev/complement #'kev/roam-subnode-get-parent)
-                                    nil
-                                    'require-match "parent node: ")))
-    (org-id-get-create)
+  (let ((parent (kev/roam-subnode-find-node nil 'require-match))
+        (new-id (org-id-get-create)))
     (org-roam-add-property (org-roam-node-id parent) "SUBNODE_OF")
     ;; subnode of title purely for visibility, not used for anything
     (org-roam-add-property (org-roam-node-title parent) "SUBNODE_OF_TITLE")))
@@ -827,23 +863,12 @@ org-roam setup and shortcuts
 (defun kev/roam-subnode-find ()
   (interactive)
   (require 'org-roam-node)
-  (let ((pnode (kev/roam-subnode-find-parent)))
-    (org-roam-node-visit
-     (org-roam-node-read nil
-                         (kev/roam-subnode-filter-subnodes pnode)
-                         nil
-                         'require-match))))
+  (org-roam-node-visit (kev/roam-subnode-find-node)))
 
 (defun kev/roam-subnode-insert ()
   (interactive)
-  (let ((pnode (kev/roam-subnode-find-parent)))
-    (org-roam-node-insert (kev/roam-subnode-filter-subnodes pnode))))
-
-(defun kev/roam-subnode-find-non-subnodes ()
-  (interactive)
-  (funcall #'org-roam-node-find nil nil (kev/complement #'kev/roam-subnode-get-parent)))
-
-
+  (let ((node (kev/roam-subnode-find-node)))
+    (org-roam-node-insert (lambda (fnode) (equal fnode node)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;; main roam config ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
