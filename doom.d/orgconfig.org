@@ -1007,7 +1007,15 @@ org-roam setup and shortcuts
   )
 #+end_src
 ** org biblio
+TODO
+- [ ] autocomplete for org-ref links
+
+org ref seems better than citar! bc
+- the open display is less sexy, though more functional bc you memorize the keys
+- has option to go to bibtex entry
 #+begin_src elisp
+
+;; org-ref stuff
 (setq bibtex-completion-bibliography '("~/Desktop/bibliography/refs.bib")
       ;; NOTE needs the trailing slash! idk why the fudge
       bibtex-completion-library-path '("~/Desktop/bibliography/pdfs/")
@@ -1019,52 +1027,51 @@ org-roam setup and shortcuts
       ;;     (incollection  . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*} ${booktitle:40}")
       ;;     (inproceedings . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*} ${booktitle:40}")
       ;;     (t             . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*}"))
+      bibtex-completion-notes-path nil
       )
-
 (use-package! org-ref
-  :after org)
-;; (use-package! org-ref-ivy
-;;   :defer-incrementally org-ref)
+  :defer-incrementally org-roam)
 
-(after! citar
-  (setq citar-bibliography '("~/Desktop/bibliography/refs.bib")
-        citar-library-paths '("~/Desktop/bibliography/pdfs/")))
-(add-hook! org-mode 'citar-capf-setup)
-
-(after! (org-roam citar)
-  (require 'citar-org-roam)
-  (require 'org-roam-bibtex)
-  (setq citar-notes-paths (list (concat org-roam-directory "/citar/"))
-        citar-file-note-extensions '(".org")))
-
-
+;; org roam bibtex stuff
 (use-package! org-roam-bibtex
   :after org-roam)
 (after! org-roam-bibtex
-  (require 'org-ref))
-
-(use-package! citar-org-roam
-  :after (citar org-roam))
-(after! citar-org-roam
-  (citar-org-roam-mode)
-  (citar-register-notes-source
-   'orb-citar-source (list :name "Org-Roam Notes"
-                           :category 'org-roam-node
-                           :items #'citar-org-roam--get-candidates
-                           :hasitems #'citar-org-roam-has-notes
-                           :open #'citar-org-roam-open-note
-                           :create #'orb-citar-edit-note
-                           :annotate #'citar-org-roam--annotate))
-  (setq citar-notes-source 'orb-citar-source))
-
-
-(use-package! citar-embark
-  :after citar embark
-  :no-require
-  :config (citar-embark-mode))
-
+  (require 'org-ref)
+  (setq orb-roam-ref-format 'org-ref-v3))
 (add-hook! org-mode
+  ;; could maybe restrict this to org-roam-dir but whatever
+  (org-roam-bibtex-mode 1)
   (setq-local company-minimum-prefix-length 0))
+
+
+;; I think citar can get better than org ref at some point but just not today
+;;
+;; (use-package! citar-org-roam
+;;   :after (citar org-roam))
+;; (after! (org-roam citar)
+;;   (require 'citar-org-roam)
+;;   (require 'org-roam-bibtex))
+;; (after! citar-org-roam
+;;   (citar-org-roam-mode)
+;;   (citar-register-notes-source
+;;    'orb-citar-source (list :name "Org-Roam Notes"
+;;                            :category 'org-roam-node
+;;                            :items #'citar-org-roam--get-candidates
+;;                            :hasitems #'citar-org-roam-has-notes
+;;                            :open #'citar-org-roam-open-note
+;;                            :create #'orb-citar-edit-note
+;;                            :annotate #'citar-org-roam--annotate))
+;;   (add-hook! org-mode 'citar-capf-setup)
+;;   (setq citar-notes-source 'orb-citar-source
+;;         citar-bibliography '("~/Desktop/bibliography/refs.bib")
+;;         citar-library-paths '("~/Desktop/bibliography/pdfs/")
+;;         citar-notes-paths (list (concat org-roam-directory "/citar/"))
+;;         citar-file-note-extensions '(".org")))
+;; (use-package! citar-embark
+;;   :after citar embark
+;;   :no-require
+;;   :config (citar-embark-mode))
+
 
 
 #+end_src
