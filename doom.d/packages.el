@@ -108,6 +108,18 @@
            :host nil
            :repo "https://github.com/jkitchin/org-ref.git" ))
 
+(package! org-roam-bibtex
+  :pin "f90ac12b7ae5ba7bcdebfe53796fd0417946e5e1"
+  :recipe (:type git
+           :host nil
+           :repo "https://github.com/org-roam/org-roam-bibtex.git"))
+
+(package! citar-org-roam
+  :pin "4f02b3b15fe06dfa19482e72b4efc3d0aa0d5b85"
+  :recipe (:type git
+           :host nil
+           :repo "https://github.com/emacs-citar/citar-org-roam.git"))
+
 ;; You can override the recipe of a built in package without having to specify
 ;; all the properties for `:recipe'. These will inherit the rest of its recipe
 ;; from Doom or MELPA/ELPA/Emacsmirror:

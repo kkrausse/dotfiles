@@ -28,7 +28,7 @@
 ;;      helm              ; the *other* search engine for love and life
        ;;ido               ; the other *other* search engine...
        ;; ivy               ; a search engine for love and life
-       vertico ;; recommended and maintained better, etc
+       (vertico +icons) ;; recommended and maintained better, etc
 
        :ui
        ;;deft              ; notational velocity for Emacs
@@ -91,7 +91,7 @@
 
        :tools
        ;;ansible
-       biblio
+       (biblio +roam2)
        ;;debugger          ; FIXME stepping through code, to help you add bugs
        ;;direnv
        ;;docker
@@ -153,7 +153,7 @@
        ;;nim               ; python + lisp at the speed of c
        ;;nix               ; I hereby declare "nix geht mehr!"
        ;;ocaml             ; an objective camel
-       org               ; organize your plain life in plain text
+       org                 ; organize your plain life in plain text
        ;;php               ; perl's insecure younger brother
        ;;plantuml          ; diagrams for confusing people more
        ;;purescript        ; javascript, but functional

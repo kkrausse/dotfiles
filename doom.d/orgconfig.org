@@ -648,13 +648,13 @@ line numbers
 (after! org
   ;;(define-key org-mode-map (kbd "C-c f") #'org-babel-execute-src-block)
 
-;; Including =org-tempo= restores the =<s=-style easy-templates that were
-;; deprecated in Org 9.2.
+  ;; Including =org-tempo= restores the =<s=-style easy-templates that were
+  ;; deprecated in Org 9.2.
   (require 'org-tempo)
 
   ;; start everything folded
   (setq org-startup-folded 't)
-;; code blocks font
+  ;; code blocks font
   (setq org-src-fontify-natively t)
   (setq org-src-tab-acts-natively t))
 
@@ -675,7 +675,7 @@ line numbers
         "'"  #'org-edit-special
         (:prefix "g" "b" #'org-mark-ring-goto)))
 
-(set-company-backend! 'text-mode '(company-yasnippet))
+(set-company-backend! 'text-mode 'company-yasnippet)
 
 ;; general org settings
 ;; makes a clearer distinction between sub-bullets
@@ -971,36 +971,77 @@ org-roam setup and shortcuts
 
 (add-hook! 'org-mode-hook :append
            ;; org roam should fix column width!
-  (after! org-roam
-    (when (is-file-in-subdirectory org-roam-directory)
-      (kev-set-visual-columns))))
+  (when (is-file-in-subdirectory org-roam-directory)
+    (require 'org-roam)
+    (kev-set-visual-columns)))
 
 (use-package! org-roam
+  :after org
   ;; :after org
   ;; this loads eagerly. The following would load it during idle time
-  :defer-incrementally org
-  ;; :commands (org-roam-node-find org-roam-node-insert)
   )
 #+end_src
-** org-ref
+** org biblio
 #+begin_src elisp
 (setq bibtex-completion-bibliography '("~/Desktop/bibliography/refs.bib")
       ;; NOTE needs the trailing slash! idk why the fudge
-    bibtex-completion-library-path '("~/Desktop/bibliography/pdfs/")
+      bibtex-completion-library-path '("~/Desktop/bibliography/pdfs/")
 
-    bibtex-completion-additional-search-fields '(keywords)
-    ;; bibtex-completion-display-formats
-    ;; '((article       . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*} ${journal:40}")
-    ;;     (inbook        . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*} Chapter ${chapter:32}")
-    ;;     (incollection  . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*} ${booktitle:40}")
-    ;;     (inproceedings . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*} ${booktitle:40}")
-    ;;     (t             . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*}"))
-    )
+      bibtex-completion-additional-search-fields '(keywords)
+      ;; bibtex-completion-display-formats
+      ;; '((article       . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*} ${journal:40}")
+      ;;     (inbook        . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*} Chapter ${chapter:32}")
+      ;;     (incollection  . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*} ${booktitle:40}")
+      ;;     (inproceedings . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*} ${booktitle:40}")
+      ;;     (t             . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*}"))
+      )
+
 (use-package! org-ref
   :after org)
+;; (use-package! org-ref-ivy
+;;   :defer-incrementally org-ref)
 
-(use-package! org-ref-ivy
-  :after org-ref)
+(after! citar
+  (setq citar-bibliography '("~/Desktop/bibliography/refs.bib")
+        citar-library-paths '("~/Desktop/bibliography/pdfs/")))
+(add-hook! org-mode 'citar-capf-setup)
+
+(after! (org-roam citar)
+  (require 'citar-org-roam)
+  (require 'org-roam-bibtex)
+  (setq citar-notes-paths (list (concat org-roam-directory "/citar/"))
+        citar-file-note-extensions '(".org")))
+
+
+(use-package! org-roam-bibtex
+  :after org-roam)
+(after! org-roam-bibtex
+  (require 'org-ref))
+
+(use-package! citar-org-roam
+  :after (citar org-roam))
+(after! citar-org-roam
+  (citar-org-roam-mode)
+  (citar-register-notes-source
+   'orb-citar-source (list :name "Org-Roam Notes"
+                           :category 'org-roam-node
+                           :items #'citar-org-roam--get-candidates
+                           :hasitems #'citar-org-roam-has-notes
+                           :open #'citar-org-roam-open-note
+                           :create #'orb-citar-edit-note
+                           :annotate #'citar-org-roam--annotate))
+  (setq citar-notes-source 'orb-citar-source))
+
+
+(use-package! citar-embark
+  :after citar embark
+  :no-require
+  :config (citar-embark-mode))
+
+(add-hook! org-mode
+  (setq-local company-minimum-prefix-length 0))
+
+
 #+end_src
 ** rust
 
@@ -1150,6 +1191,8 @@ for skewer, like a repl type thing for js
                         "cmd:\n"
                         py-interp))
        (run-python py-interp))))
+  (with-current-buffer (python-shell-get-buffer)
+    (setq-local comint-scroll-to-bottom-on-output 'others))
   (display-buffer (python-shell-get-buffer)
                   '(display-buffer-reuse-window
                     display-buffer-use-least-recent-window)))
@@ -1160,7 +1203,6 @@ for skewer, like a repl type thing for js
   (let ((escaped-code (replace-regexp-in-string "'" "\\\\'" python-code)))
     (format "print('''%s...''')" escaped-code)))
 
-(message "blah\ndee")
 (kev/comment
  (print
   (format-python-print
@@ -1188,9 +1230,6 @@ for skewer, like a repl type thing for js
 (defun kev/python-shell-send-region (start end)
   (kev/python-shell-send-string (buffer-substring-no-properties start end)))
 
-
-
-
 ;; FIXME: this doesn't work when there's like empty spaces in the function sometimes?
 ;; I think it has to do with which line you start on, not with the nav-...-statement stuff
 (defun kev/python-shell-send-toplevel ()
@@ -1203,11 +1242,15 @@ for skewer, like a repl type thing for js
                 (python-nav-backward-statement))
               (point-marker))
        (progn (goto-char start)
-              (python-nav-forward-statement)
-              (while (> (current-indentation) 0)
+              (python-nav-end-of-statement)
+              (unless (= (line-end-position) (buffer-end 1))
+                      (python-nav-forward-statement))
+              (while (and (> (current-indentation) 0)
+                          (not (= (line-end-position) (buffer-end 1))))
                 (python-nav-forward-statement))
-              ;; in case you're at the end of the buffer
-              (python-nav-backward-statement)
+              ;; in case you're at the end of the buffer, don't go back
+              (unless (= (line-end-position) (buffer-end 1))
+                      (python-nav-backward-statement))
               (python-nav-end-of-statement)
               (min (buffer-end 1)
                    (point-marker)))))))
