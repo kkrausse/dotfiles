@@ -879,6 +879,26 @@ org-roam setup and shortcuts
 (add-to-list 'display-buffer-alist '("\\*org-roam.*\\*" . (display-buffer-reuse-window display-buffer-same-window)))
 (add-to-list 'display-buffer-alist '("\\*lsp-help\\*" . (display-buffer-reuse-window display-buffer-same-window)))
 
+(after! org-roam
+  (cl-defmethod org-roam-node-kev-subnode-format ((node org-roam-node))
+    "would be used in org-roam-node-display-template by setting it to \"${kev-subnode-format}\""
+    (let ((parent-node (thread-last node
+                                    (org-roam-node-properties)
+                                    (assoc-string "SUBNODE_OF")
+                                    (cdr)
+                                    (org-roam-node-from-id))))
+      (if parent-node
+          (concat (org-roam-node-kev-subnode-format parent-node) " -> " (org-roam-node-title node))
+        (org-roam-node-title node))))
+
+        org-roam-node-display-template "${kev-subnode-format}"
+  )
+
+(defun kev/org-roam-find-all-nodes ()
+  (interactive)
+  (require 'org-roam)
+  (let ((org-roam-node-display-template "${kev-subnode-format}"))
+    (org-roam-node-find)))
 
 ;; map org roam everywhere to these autoloads
 (map! (:prefix ("C-c n" . "Org Roam")
@@ -886,7 +906,7 @@ org-roam setup and shortcuts
                         "i" #'kev/roam-subnode-insert
                         "c" #'kev/roam-subnode-create
                         "f" #'kev/roam-subnode-find)
-               "f" (cons "find node" #'kev/roam-subnode-find-non-subnodes)
+               "f" #'kev/org-roam-find-all-nodes ;; (cons "find node" #'kev/roam-subnode-find-non-subnodes)
                "d" #'org-roam-dailies-goto-today))
 
 (after! org-roam
@@ -941,17 +961,6 @@ org-roam setup and shortcuts
   ;; makes roam stuff prettier
   (add-hook! 'org-roam-mode-hook
     (kev-set-visual-columns))
-
-  (cl-defmethod org-roam-node-kev-subnode-format ((node org-roam-node))
-    "would be used in org-roam-node-display-template by setting it to \"${kev-subnode-format}\""
-    (let ((parent-node (thread-last node
-                                    (org-roam-node-properties)
-                                    (assoc-string "SUBNODE_OF")
-                                    (cdr)
-                                    (org-roam-node-from-id))))
-      (if parent-node
-          (concat (org-roam-node-title node) " parent: " (org-roam-node-title parent-node))
-        (org-roam-node-title node))))
 
 
   ;; If you're using a vertical completion framework, you might want a more informative completion interface
