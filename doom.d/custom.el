@@ -8,7 +8,7 @@
  '(org-src-window-setup 'current-window)
  '(projectile-sort-order 'recentf)
  '(safe-local-variable-values
-   '((cider-jack-in-cmd . "clojure -M:dev:test:local-dev")
+   '((kev/py-shell-dir . ".") (cider-jack-in-cmd . "clojure -M:dev:test:local-dev")
      (cider-jack-in-cmd . "clojure -M:local-dev:cljs")
      (cider-default-cljs-repl . custom)
      (cider-jack-in-cmd . "clojure -M:test:local-dev")

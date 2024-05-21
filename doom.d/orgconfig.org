@@ -1025,9 +1025,9 @@ org ref seems better than citar! bc
 #+begin_src elisp
 
 ;; org-ref stuff
-(setq bibtex-completion-bibliography '("~/Desktop/bibliography/refs.bib")
+(setq ;; bibtex-completion-bibliography '("~/Desktop/bibliography/refs.bib")
       ;; NOTE needs the trailing slash! idk why the fudge
-      bibtex-completion-library-path '("~/Desktop/bibliography/pdfs/")
+      ;; bibtex-completion-library-path '("~/Desktop/bibliography/pdfs/")
 
       bibtex-completion-additional-search-fields '(keywords)
       ;; bibtex-completion-display-formats
@@ -1216,7 +1216,7 @@ for skewer, like a repl type thing for js
 (defvar kev/py-shell-interpreter "python3"
   "no spaces allowed! a restriction of python.el")
 
-(defvar kev/py-shell-dir "/ssh:kkrausse@diesel2:/home/kkrausse/repos/kkrausse/memory-mistral")
+(defvar kev/py-shell-dir ".")
 
 ;; (add-to-list 'display-buffer-alist '("\\*org-roam.*\\*" . (display-buffer-reuse-window display-buffer-same-window)))
 
@@ -1383,6 +1383,8 @@ nice keybindings
         indent-region-function nil
         cider-comment-postfix ")"
 
+        ;; sets font locking via nrepl
+        cider-font-lock-dynamically '(macro core function var deprecated)
         clojure-toplevel-inside-comment-form t
         ;; code alignment
         clojure-align-forms-automatically t
@@ -1400,7 +1402,7 @@ nice keybindings
 
   (define-clojure-indent
     (into 1)
-    (do-template 2)
+    (do-template nil)
     (sc.api/letsc 1)
     (macrolet '(1 ((:defn)) nil)))
   )

@@ -30,6 +30,7 @@
                            ;; I guess this at least puts it on clojure-lsp's radar
                            ;; zkev.local/clojure-src {:local/root "/Users/kevinkrausse/Documents/repos"}
 
+                           kev.dev/clj-utils {:local/root "/Users/kevinkrausse/Documents/taxbit/clj-utils"}
                            ;;;;;;;;;;;;;; end local stuff ;;;;;;;;;;;;;;;;;;;;;;;
                            org.clojure/core.async {:git/url "https://github.com/clojure/core.async"
                                                    :sha "ad5c0475346a0ef36e6a8623cc1d3c1b6439ef96"}
