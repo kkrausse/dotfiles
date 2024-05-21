@@ -854,7 +854,7 @@ org-roam setup and shortcuts
 
 (defun kev/roam-subnode-create ()
   (interactive)
-  (let ((parent (kev/roam-subnode-find-node nil 'require-match))
+  (let ((parent (org-roam-node-read nil nil nil 'require-match))
         (new-id (org-id-get-create)))
     (org-roam-add-property (org-roam-node-id parent) "SUBNODE_OF")
     ;; subnode of title purely for visibility, not used for anything
@@ -879,26 +879,73 @@ org-roam setup and shortcuts
 (add-to-list 'display-buffer-alist '("\\*org-roam.*\\*" . (display-buffer-reuse-window display-buffer-same-window)))
 (add-to-list 'display-buffer-alist '("\\*lsp-help\\*" . (display-buffer-reuse-window display-buffer-same-window)))
 
-(after! org-roam
-  (cl-defmethod org-roam-node-kev-subnode-format ((node org-roam-node))
-    "would be used in org-roam-node-display-template by setting it to \"${kev-subnode-format}\""
+(defvar kev/org-roam-node-subnode-name-cache (make-hash-table :test 'equal)
+  "Cache for storing results of `org-roam-node-kev-subnode-format'.")
+
+(defun kev/subnode-parents (node &optional so-far)
     (let ((parent-node (thread-last node
                                     (org-roam-node-properties)
                                     (assoc-string "SUBNODE_OF")
                                     (cdr)
                                     (org-roam-node-from-id))))
       (if parent-node
-          (concat (org-roam-node-kev-subnode-format parent-node) " -> " (org-roam-node-title node))
-        (org-roam-node-title node))))
+          (cons parent-node
+                (kev/subnode-parents parent-node))
+        nil)))
 
-        org-roam-node-display-template "${kev-subnode-format}"
+
+(after! org-roam
+  (cl-defmethod org-roam-node-kev-parent-path ((node org-roam-node))
+    "would be used in org-roam-node-display-template by setting it to \"${kev-subnode-format}\""
+    (let ((node-id (org-roam-node-id node)))
+      (or (gethash node-id kev/org-roam-node-subnode-name-cache)
+          (let ((result
+                 (let ((parents (kev/subnode-parents node)))
+                   (if parents
+                       (concat
+                        (s-join " -> "
+                                (reverse
+                                 (mapcar #'org-roam-node-title
+                                         parents)))
+                        " -> ")
+                     ""))))
+            (puthash node-id result kev/org-roam-node-subnode-name-cache)
+            result))))
+
+  (setq org-roam-node-display-template "${kev-parent-path}${title}")
+  (setq kev/org-roam-node-subnode-name-cache (make-hash-table :test 'equal))
   )
 
-(defun kev/org-roam-find-all-nodes ()
-  (interactive)
-  (require 'org-roam)
-  (let ((org-roam-node-display-template "${kev-subnode-format}"))
-    (org-roam-node-find)))
+
+(kev/comment
+ (s-join "taco" (list "a" "b"))
+ ;; NOTE:
+ ;; idea -- add post hook to org roam db sync to update the subnode titles
+ ;; OR -- cache around subnode format, but idk how to invalidate cache except manually
+ (org-roam-db-sync)
+ (reverse (list 1 2 3))
+ (org-roam-db-update-file)
+ (org-roam-node-find)
+ (org-roam-node-list)
+ (org-roam-id-find "2bb8fe67-0197-422e-a4a9-f392764bbceb")
+ kev/org-roam-node-subnode-name-cache (make-hash-table :test 'equal)
+
+ (setq kev/org-roam-node-subnode-name-cache (make-hash-table :test 'equal))
+
+ (setq org-roam-node-display-template "${title}")
+
+ (org-roam-node-title)
+
+ (mapcar
+  #'org-roam-node-title
+  (kev/subnode-parents
+   (org-roam-node-from-id "e29a1f5a-0a1d-4616-8c41-9320e501cdbf")))
+
+ (org-roam-node-read--to-candidate
+  (org-roam-node-from-id "2bb8fe67-0197-422e-a4a9-f392764bbceb")
+  (org-roam-node--process-display-format "${kev-subnode-format}"))
+
+ )
 
 ;; map org roam everywhere to these autoloads
 (map! (:prefix ("C-c n" . "Org Roam")
@@ -906,7 +953,7 @@ org-roam setup and shortcuts
                         "i" #'kev/roam-subnode-insert
                         "c" #'kev/roam-subnode-create
                         "f" #'kev/roam-subnode-find)
-               "f" #'kev/org-roam-find-all-nodes ;; (cons "find node" #'kev/roam-subnode-find-non-subnodes)
+               "f" #'org-roam-node-find ;; (cons "find node" #'kev/roam-subnode-find-non-subnodes)
                "d" #'org-roam-dailies-goto-today))
 
 (after! org-roam
@@ -918,10 +965,7 @@ org-roam setup and shortcuts
                                 "c" #'kev/roam-subnode-create
                                 "f" #'kev/roam-subnode-find)
                        "c" #'org-id-get-create
-                       "i" (cons "insert node link"
-                                 '(lambda ()
-                                    (interactive)
-                                    (funcall #'org-roam-node-insert (kev/complement #'kev/roam-subnode-get-parent))))
+                       "i" #'org-roam-node-insert
                        "r" '("org-roam-buffer-display-dedicated" .
                              (lambda ()
                                (interactive)
