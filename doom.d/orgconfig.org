@@ -1222,7 +1222,7 @@ org ref seems better than citar! bc
   (lsp)
   (lsp-mode 1)
 
-  (setq typescript-indent-level 2))
+  (setq typescript-indent-level 4))
 #+end_src
 
 #+RESULTS:
