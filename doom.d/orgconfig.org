@@ -757,6 +757,7 @@ org-roam setup and shortcuts
     - parents are found by just finding all ids that appear in a :subnode_of:
     - have to change regular finds to ignore subnodes now
   - TODO
+    - [ ] subnode links, depricate old shit
     - [ ] make roam buffer section for subnodes
     - [ ] allow todo items. have all things under a node cross-noted with TODO show up in the roam buffer
     - [X] allow for multiple subnode_of entries so you can "file" something under two things
@@ -778,9 +779,9 @@ org-roam setup and shortcuts
                              (org-roam-node-properties)
                              (assoc-string "SUBNODE_OF")
                              (cdr))))
-      (when subnode-of-val
-          (->> subnode-of-val
-               (split-string)))))
+    (when subnode-of-val
+      (->> subnode-of-val
+           (split-string)))))
 
 (defun kev/roam-subnode-get-parent (node)
   "actually just gets the first parent id"
@@ -804,7 +805,7 @@ org-roam setup and shortcuts
   (let ((parent-ids (kev/roam-subnode-get-all-parent-ids)))
     (org-roam-node-read nil
                         (lambda (node)
-                           (member (org-roam-node-id node) parent-ids))
+                          (member (org-roam-node-id node) parent-ids))
                         nil
                         'require-match
                         "parend node: ")))
@@ -820,7 +821,6 @@ org-roam setup and shortcuts
   (interactive)
   (print (org-entry-get nil "ITEM")))
 
-
 (defun kev/roam-subnode-find-non-subnodes ()
   (interactive)
   (funcall #'org-roam-node-find nil nil (kev/complement #'kev/roam-subnode-get-parent)))
@@ -829,9 +829,10 @@ org-roam setup and shortcuts
   (print args))
 
 (defun kev/roam-subnode-find-node (&optional current-node require-match)
+  "I think I can basically delete this"
   (interactive (list nil))
   (require 'org-roam-node)
-  (kev/prn  "got node" (when current-node (org-roam-node-title current-node)))
+  ;; (kev/prn  "got node" (when current-node (org-roam-node-title current-node)))
   (if current-node
       (let ((found (cl-remove-if-not
                     (kev/roam-subnode-filter-subnodes current-node)
@@ -856,6 +857,10 @@ org-roam setup and shortcuts
   (interactive)
   (let ((parent (org-roam-node-read nil nil nil 'require-match))
         (new-id (org-id-get-create)))
+    ;; eventially only want this & to migrate
+    (org-roam-add-property (org-link-make-string (concat "id:" (org-roam-node-id parent))
+                                                 (org-roam-node-title parent))
+                           "SUBNODE_LINKS")
     (org-roam-add-property (org-roam-node-id parent) "SUBNODE_OF")
     ;; subnode of title purely for visibility, not used for anything
     (org-roam-add-property (org-roam-node-title parent) "SUBNODE_OF_TITLE")))
@@ -883,42 +888,99 @@ org-roam setup and shortcuts
   "Cache for storing results of `org-roam-node-kev-subnode-format'.")
 
 (defun kev/subnode-parents (node &optional so-far)
-    (let ((parent-node (thread-last node
-                                    (org-roam-node-properties)
-                                    (assoc-string "SUBNODE_OF")
-                                    (cdr)
-                                    (org-roam-node-from-id))))
-      (if parent-node
-          (cons parent-node
-                (kev/subnode-parents parent-node))
-        nil)))
+  (let ((parent-node (thread-last node
+                                  (org-roam-node-properties)
+                                  (assoc-string "SUBNODE_OF")
+                                  (cdr)
+                                  (org-roam-node-from-id))))
+    (if parent-node
+        (cons parent-node
+              (kev/subnode-parents parent-node))
+      nil)))
+
+(defun kev/subnode-tree (node)
+  "returs list of acestor trees where each car is parent and cdr is the list of ancestors"
+  (cons node
+        (thread-last node
+                     (org-roam-node-properties)
+                     (assoc-string "SUBNODE_OF")
+                     (cdr)
+                     ((lambda (s) (when s (s-split " " s))))
+                     (mapcar #'org-roam-node-from-id)
+                     (cl-remove-if 'not)
+                     (mapcar (lambda (parent)
+                               (kev/subnode-tree parent))))))
+
+(defun subnode-paths (tree)
+  (or
+   (thread-last (cdr tree)
+                (mapcar (lambda (pt)
+                          (concat (s-join " " (subnode-paths pt))
+                                  " -> "
+                                  (org-roam-node-title (car tree))))))
+   (list (org-roam-node-title (car tree)))))
+
+(defun kev/subnode-formatted-parents (node)
+  (let* ((parent-paths
+          (thread-last (when node (kev/subnode-tree node))
+                       (cdr)
+                       ;; first path of each parent
+                       (mapcar (lambda (pt)
+                                 (car (subnode-paths pt))))))
+         (max-len (cl-reduce 'max
+                             (mapcar 'length parent-paths)
+                             :initial-value 0)))
+    (thread-last parent-paths
+                 ;; (mapcar (lambda (str)
+                 ;;           (concat (make-string (- max-len (length str)) ?\s) str)))
+                 (s-join "|"))))
 
 
 (after! org-roam
+
   (cl-defmethod org-roam-node-kev-parent-path ((node org-roam-node))
     "would be used in org-roam-node-display-template by setting it to \"${kev-subnode-format}\""
     (let ((node-id (org-roam-node-id node)))
       (or (gethash node-id kev/org-roam-node-subnode-name-cache)
           (let ((result
-                 (let ((parents (kev/subnode-parents node)))
-                   (if parents
-                       (concat
-                        (s-join " -> "
-                                (reverse
-                                 (mapcar #'org-roam-node-title
-                                         parents)))
-                        " -> ")
-                     ""))))
+                 (kev/subnode-formatted-parents node)))
             (puthash node-id result kev/org-roam-node-subnode-name-cache)
             result))))
 
-  (setq org-roam-node-display-template "${kev-parent-path}${title}")
+  (setq org-roam-node-display-template (concat (propertize "${title:*}" 'face 'outline-1)
+                                               (propertize " " 'display '(space :align-to 30))
+                                               (propertize "${kev-parent-path}" 'face 'font-lock-comment-face)
+                                               ))
   (setq kev/org-roam-node-subnode-name-cache (make-hash-table :test 'equal))
   )
 
-
 (kev/comment
- (s-join "taco" (list "a" "b"))
+
+ ;; nah this don't do shit really.
+ ;; interesting though would be to propertize the parents or align them?
+ (setq org-roam-node-annotation-function (lambda (n)
+                                           (concat (propertize " "  'display '(space :align-to center))
+                                                   (org-roam-node-file n))))
+
+ (org-roam-node-read)
+ (lambda (n)
+   (thread-last (kev/subnode-tree n)
+                (cdr)
+                (mapcar (lambda (pt)
+                          (car (subnode-paths pt))))
+                (cons "")
+                (cl-reduce (lambda (&optional a b)
+                             (concat a
+                                     (propertize "\n " 'display '(space :align-to center))
+                                     b))
+                           )))
+
+ (concat "a " "b" "c")
+
+
+ (org-roam-node-from-id "")
+
+ (s-join "poop" (list "a-" "-b" "-c"))
  ;; NOTE:
  ;; idea -- add post hook to org roam db sync to update the subnode titles
  ;; OR -- cache around subnode format, but idk how to invalidate cache except manually
@@ -953,7 +1015,7 @@ org-roam setup and shortcuts
                         "i" #'kev/roam-subnode-insert
                         "c" #'kev/roam-subnode-create
                         "f" #'kev/roam-subnode-find)
-               "f" #'org-roam-node-find ;; (cons "find node" #'kev/roam-subnode-find-non-subnodes)
+               "f" #'org-roam-node-find
                "d" #'org-roam-dailies-goto-today))
 
 (after! org-roam
@@ -986,20 +1048,20 @@ org-roam setup and shortcuts
                   (while (not (or (= 0 (current-indentation))
                                   ;; go up two levels of indent
                                   (<= (current-indentation) (- start-indent 3))))
-                   (evil-previous-line))
-                 (beginning-of-line)
-                 (point)))
-          (end (save-excursion
-                 ;; so it collects heading stuff. Maybe should remove
-                 (if (= ?* (char-after (line-beginning-position)))
-                     (org-end-of-subtree)
-                   (progn
-                     (evil-next-line)
-                     (while (not (or (<= (current-indentation) start-indent)
-                                     (<= (point-max) (line-end-position))))
-                       (evil-next-line))
-                     (evil-beginning-of-line)))
-                 (point))))
+                    (evil-previous-line))
+                  (beginning-of-line)
+                  (point)))
+           (end (save-excursion
+                  ;; so it collects heading stuff. Maybe should remove
+                  (if (= ?* (char-after (line-beginning-position)))
+                      (org-end-of-subtree)
+                    (progn
+                      (evil-next-line)
+                      (while (not (or (<= (current-indentation) start-indent)
+                                      (<= (point-max) (line-end-position))))
+                        (evil-next-line))
+                      (evil-beginning-of-line)))
+                  (point))))
       (string-trim (concat (buffer-substring-no-properties beg end) "\n"))))
 
   ;; makes roam stuff prettier
@@ -1015,24 +1077,24 @@ org-roam setup and shortcuts
   (setq org-roam-v2-ack t
         org-roam-dailies-directory "daily/"
         org-roam-preview-function #'kev/org-roam-preview)
-        org-roam-node-display-template "${title}"
-        ;; this doesn't get called for some reason?
-        ;; I think ivy ignores it for some reason
-        ;; see `ivy-completing-read'?
-        org-roam-node-annotation-function (lambda ()
-                                            (message "calling annotation!")
-                                            (let ((parent-node (thread-last node
-                                                                            (org-roam-node-properties)
-                                                                            (assoc-string "SUBNODE_OF")
-                                                                            (cdr)
-                                                                            (org-roam-node-from-id))))
-                                              (if parent-node
-                                                  (concat "parent: " (org-roam-node-title parent-node))
-                                                "")))
-        ;; org-roam-node-formatter
-        ;; I'd imagine this could be used if we want to prefix titles of subnodes with parent.
-        ;; then when you insert the node, you'd undo the prefix when inserting.
-        ;; then you don't have to worry about having super generic titles
+  org-roam-node-display-template "${title}"
+  ;; this doesn't get called for some reason?
+  ;; I think ivy ignores it for some reason
+  ;; see `ivy-completing-read'?
+  org-roam-node-annotation-function (lambda ()
+                                      (message "calling annotation!")
+                                      (let ((parent-node (thread-last node
+                                                                      (org-roam-node-properties)
+                                                                      (assoc-string "SUBNODE_OF")
+                                                                      (cdr)
+                                                                      (org-roam-node-from-id))))
+                                        (if parent-node
+                                            (concat "parent: " (org-roam-node-title parent-node))
+                                          "")))
+  ;; org-roam-node-formatter
+  ;; I'd imagine this could be used if we want to prefix titles of subnodes with parent.
+  ;; then when you insert the node, you'd undo the prefix when inserting.
+  ;; then you don't have to worry about having super generic titles
   )
 
 #+end_src
