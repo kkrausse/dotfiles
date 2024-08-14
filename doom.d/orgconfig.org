@@ -952,6 +952,23 @@ org-roam setup and shortcuts
                                                (propertize "${kev-parent-path}" 'face 'font-lock-comment-face)
                                                ))
   (setq kev/org-roam-node-subnode-name-cache (make-hash-table :test 'equal))
+
+  (defun kev/backlink-is-daily? (backlink)
+    (thread-last backlink
+                 (org-roam-backlink-source-node)
+                 (org-roam-node-file)
+                 (org-roam-dailies--daily-note-p)))
+
+  (defun kev/roam-dailies-section (node)
+    (cl-letf (((symbol-function 'org-roam-backlinks-sort) (lambda (a b)
+                                                            ;; just look at filename for dailiy check
+                                                            (string< (org-roam-node-file (org-roam-backlink-source-node b))
+                                                                     (org-roam-node-file (org-roam-backlink-source-node a))))))
+      (org-roam-backlinks-section node :show-backlink-p #'kev/backlink-is-daily?)))
+
+  (setq org-roam-mode-sections (list #'kev/roam-dailies-section
+                                     `(org-roam-backlinks-section :show-backlink-p ,(kev/complement #'kev/backlink-is-daily?))
+                                     'org-roam-reflinks-section))
   )
 
 (kev/comment
