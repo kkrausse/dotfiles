@@ -64,6 +64,9 @@ notes:
         "<tab>" #'company-complete)
   )
 
+;; don't like cider doing all this shit fucking my other windows.
+;; just use display buffer alist to use same window
+(setq pop-up-windows nil)
 ;; diplay buffer stuff
 (setq display-buffer-base-action '((display-buffer-reuse-window
                                     display-buffer-same-window
@@ -540,6 +543,10 @@ in `input' to get back edits made by the model"
 
 ** Random Config
 #+begin_src elisp
+;; I think this just defaults
+(setq orderless-matching-styles '(orderless-literal
+                                  orderless-regexp))
+(setq completion-styles '(orderless basic))
 (setq projectile-switch-project-action #'projectile-dired)
 
 ;; makes the above thing actially work
@@ -643,6 +650,51 @@ line numbers
 #+end_src
 
 * Lang
+** sql
+#+begin_src elisp
+
+(defvar kev/duckp "duckp")
+
+;; starts buffer with it
+(defun kev/start-duck ()
+  (interactive)
+  (make-comint kev/duckp "duckdb"))
+
+(defun kev/shell-send-paragraph ()
+  (interactive)
+  (let ((start (point)))
+    (save-excursion
+      (process-send-region
+       kev/duckp
+       (progn (backward-paragraph)
+              (forward-char)
+              (beginning-of-line)
+              (point))
+       (progn (goto-char start)
+              (forward-paragraph)
+              (min (buffer-end 1)
+                   (point)))))))
+
+(defun kev/shell-send- (start end)
+  (interactive (list (region-beginning) (region-end)))
+  (if (region-active-p)
+      (process-send-region kev/duckp start end)
+    (kev/shell-send-paragraph)))
+
+(setq sql-mode-hook nil)
+
+(add-hook! sql-mode
+ :append
+ (map! :map sql-mode-map
+       :localleader
+       "'" #'kev/start-duck
+       (:prefix ("r" . "repl")
+                "q" (cons "quit"
+                          (lambda () (interactive)
+                            (process-send-string kev/duckp ".quit\n"))))
+       (:prefix ("e" . "Eval")
+                "r" (cons "shell send region or paragraph" #'kev/shell-send-))))
+#+end_src
 ** org
 #+begin_src elisp
 (after! org
@@ -853,17 +905,17 @@ org-roam setup and shortcuts
      (org-roam-node-read nil
                          (kev/complement #'kev/roam-subnode-get-parent)))))
 
-(defun kev/roam-subnode-create ()
-  (interactive)
-  (let ((parent (org-roam-node-read nil nil nil 'require-match))
-        (new-id (org-id-get-create)))
+(defun kev/roam-subnode-create (parent)
+  (interactive (list (org-roam-node-read nil nil nil 'require-match)))
+  (let ((new-id (org-id-get-create)))
     ;; eventially only want this & to migrate
     (org-roam-add-property (org-link-make-string (concat "id:" (org-roam-node-id parent))
                                                  (org-roam-node-title parent))
-                           "SUBNODE_LINKS")
+                           "PARENT_LINKS")
     (org-roam-add-property (org-roam-node-id parent) "SUBNODE_OF")
     ;; subnode of title purely for visibility, not used for anything
-    (org-roam-add-property (org-roam-node-title parent) "SUBNODE_OF_TITLE")))
+    (org-roam-add-property (org-roam-node-title parent) "SUBNODE_OF_TITLE")
+    ))
 
 (defun kev/roam-subnode-find ()
   (interactive)
@@ -911,29 +963,35 @@ org-roam setup and shortcuts
                      (mapcar (lambda (parent)
                                (kev/subnode-tree parent))))))
 
-(defun subnode-paths (tree)
+(defun subnode-flat-parent-tree (tree)
   (or
    (thread-last (cdr tree)
-                (mapcar (lambda (pt)
-                          (concat (s-join " " (subnode-paths pt))
-                                  " -> "
-                                  (org-roam-node-title (car tree))))))
-   (list (org-roam-node-title (car tree)))))
+                (seq-mapcat (lambda (pt)
+                              (mapcar (lambda (p) (cons (car tree)
+                                                        p))
+                                      (subnode-flat-parent-tree pt)))))
+   (list (list (car tree)))))
+
+;; (thread-last "c21ebe89-5182-4fbd-87f9-ef5e4f14e420"
+;;              (org-roam-node-from-id)
+;;              (kev/subnode-tree)
+;;              ;; (subnode-paths)
+;;              (subnode-flat-parent-tree)
+;;              (car)
+;;              (mapcar #'org-roam-node-title)
+;;              )
 
 (defun kev/subnode-formatted-parents (node)
-  (let* ((parent-paths
-          (thread-last (when node (kev/subnode-tree node))
-                       (cdr)
-                       ;; first path of each parent
-                       (mapcar (lambda (pt)
-                                 (car (subnode-paths pt))))))
-         (max-len (cl-reduce 'max
-                             (mapcar 'length parent-paths)
-                             :initial-value 0)))
-    (thread-last parent-paths
-                 ;; (mapcar (lambda (str)
-                 ;;           (concat (make-string (- max-len (length str)) ?\s) str)))
-                 (s-join "|"))))
+  (thread-last (when node (kev/subnode-tree node))
+               (cdr)
+               (mapcar (lambda (pt)
+                         (thread-last pt
+                                      (subnode-flat-parent-tree)
+                                      ;; first path of each parent
+                                      (car)
+                                      (mapcar #'org-roam-node-title)
+                                      (s-join " -> "))))
+               (s-join "|")))
 
 
 (after! org-roam
@@ -948,9 +1006,9 @@ org-roam setup and shortcuts
             result))))
 
   (setq org-roam-node-display-template (concat (propertize "${title:*}" 'face 'outline-1)
-                                               (propertize " " 'display '(space :align-to 30))
-                                               (propertize "${kev-parent-path}" 'face 'font-lock-comment-face)
+                                               (propertize "${kev-parent-path:*}" 'face 'font-lock-comment-face)
                                                ))
+  ;; TODO build cache eagerly
   (setq kev/org-roam-node-subnode-name-cache (make-hash-table :test 'equal))
 
   (defun kev/backlink-is-daily? (backlink)
@@ -959,16 +1017,38 @@ org-roam setup and shortcuts
                  (org-roam-node-file)
                  (org-roam-dailies--daily-note-p)))
 
+  (cl-defun kev/subnodes-section (node)
+    "subnodes section"
+    ;; TODO sort?
+    (when-let ((subnodes (cl-remove-if-not
+                          (kev/roam-subnode-filter-subnodes node)
+                          (org-roam-node-list))))
+      (magit-insert-section (org-roam-backlinks)
+        (magit-insert-heading "Subnodes:")
+        (dolist (subnode subnodes)
+          (org-roam-node-insert-section
+           :source-node subnode
+           :point (org-roam-node-point subnode)
+           ;; note can fill in when we have something real
+           :properties nil ;; (org-roam-backlink-properties backlink)
+           ))
+        (insert ?\n))))
+
   (defun kev/roam-dailies-section (node)
+    "newest->oldest dailies"
     (cl-letf (((symbol-function 'org-roam-backlinks-sort) (lambda (a b)
                                                             ;; just look at filename for dailiy check
                                                             (string< (org-roam-node-file (org-roam-backlink-source-node b))
                                                                      (org-roam-node-file (org-roam-backlink-source-node a))))))
       (org-roam-backlinks-section node :show-backlink-p #'kev/backlink-is-daily?)))
 
-  (setq org-roam-mode-sections (list #'kev/roam-dailies-section
-                                     `(org-roam-backlinks-section :show-backlink-p ,(kev/complement #'kev/backlink-is-daily?))
-                                     'org-roam-reflinks-section))
+  (setq org-roam-mode-sections (list
+                                #'kev/subnodes-section
+                                ;; ordered dailies
+                                #'kev/roam-dailies-section
+                                ;; non-dailies
+                                `(org-roam-backlinks-section :show-backlink-p ,(kev/complement #'kev/backlink-is-daily?))
+                                'org-roam-reflinks-section))
   )
 
 (kev/comment
@@ -1055,6 +1135,9 @@ org-roam setup and shortcuts
                        "d" #'org-roam-dailies-goto-today
                        "a" #'org-roam-alias-add)))
 
+  (defun kev/next-non-whitespace ()
+    (interactive)
+    (skip-syntax-forward " >"))
 
   ;; TODO: make this only go up a few levels of indentation rather than to zero.
   ;; should be pretty easy
@@ -1064,7 +1147,7 @@ org-roam setup and shortcuts
            (beg (save-excursion
                   (while (not (or (= 0 (current-indentation))
                                   ;; go up two levels of indent
-                                  (<= (current-indentation) (- start-indent 3))))
+                                  (<= (current-indentation) (- start-indent 2))))
                     (evil-previous-line))
                   (beginning-of-line)
                   (point)))
@@ -1074,13 +1157,15 @@ org-roam setup and shortcuts
                       (org-end-of-subtree)
                     (progn
                       (evil-next-line)
-                      (while (not (or (<= (current-indentation) start-indent)
-                                      (<= (point-max) (line-end-position))))
-                        (evil-next-line))
+                      (while (and (not (<= (current-indentation) start-indent))
+                                  (not (<= (point-max) (line-end-position))))
+                        (evil-next-line)
+                        (evil-beginning-of-line)
+                        (kev/next-non-whitespace)
+                        )
                       (evil-beginning-of-line)))
                   (point))))
       (string-trim (concat (buffer-substring-no-properties beg end) "\n"))))
-
   ;; makes roam stuff prettier
   (add-hook! 'org-roam-mode-hook
     (kev-set-visual-columns))
@@ -1465,11 +1550,11 @@ nice keybindings
 
 #+begin_src elisp
 (setq kevin-clojure-playbook
-  '(("portal" . "(do (require 'portal.api) (portal.api/open) (add-tap #'portal.api/submit))")
-    ("sync deps" . "((requiring-resolve 'clojure.repl.deps/sync-deps) :aliases [:test :dev :local-dev])")
-    ("prn space" . "(doseq [_ (range 40)] (prn \"\"))")
-    ("humane test output" . "((requiring-resolve 'pjstadig.humane-test-output/activate!))")
-    ("warn on reflection" . "(set! *warn-on-reflection* true)")))
+      '(("portal" . "(do (require 'portal.api) (portal.api/open) (add-tap #'portal.api/submit))")
+        ("sync deps" . "((requiring-resolve 'clojure.repl.deps/sync-deps) :aliases [:test :dev :local-dev])")
+        ("prn space" . "(doseq [_ (range 40)] (prn \"\"))")
+        ("humane test output" . "((requiring-resolve 'pjstadig.humane-test-output/activate!))")
+        ("warn on reflection" . "(set! *warn-on-reflection* true)")))
 
 (defun kevin-clojure-playbook (&optional output-to-current-buffer)
   "evaluate something from the playbook (w/ cider)"
@@ -1497,36 +1582,39 @@ nice keybindings
     (clojure-align beg end)
     (lsp-format-region beg end)))
 
+(add-to-list 'display-buffer-alist '("\\*cider-error\\*" . (display-buffer-reuse-window display-buffer-same-window)))
 (add-hook! clojure-mode
-  ;;(aggressive-indent-mode) this shit so slow :(
-  (hs-minor-mode 1)
+           ;;(aggressive-indent-mode) this shit so slow :(
+           (hs-minor-mode 1)
 
-  (setq cider-comment-prefix "(comment\n"
-        cider-comment-continued-prefix "  "
-        indent-region-function nil
-        cider-comment-postfix ")"
+           (setq cider-comment-prefix "(comment\n"
+                 cider-comment-continued-prefix "  "
+                 indent-region-function nil
+                 cider-comment-postfix ")"
 
-        clojure-toplevel-inside-comment-form t
-        ;; code alignment
-        clojure-align-forms-automatically t
+                 clojure-toplevel-inside-comment-form t
+                 ;; code alignment
+                 clojure-align-forms-automatically t
 
-        ;; because lsp indent is incredibly annoying for clojure
-        indent-region-function nil
-        )
+                 ;; because lsp indent is incredibly annoying for clojure
+                 indent-region-function nil
+                 cider-auto-jump-to-error nil
+                 cider-auto-select-error-buffer nil
+                 )
 
 
-  (defun kev-format-buffer ()
-    (interactive)
-    (save-excursion
-        (lsp-format-buffer)
-        (clojure-align (point-min) (point-max))))
+           (defun kev-format-buffer ()
+             (interactive)
+             (save-excursion
+               (lsp-format-buffer)
+               (clojure-align (point-min) (point-max))))
 
-  (define-clojure-indent
-    (into 1)
-    (do-template 2)
-    (sc.api/letsc 1)
-    (macrolet '(1 ((:defn)) nil)))
-  )
+           (define-clojure-indent
+             (into 1)
+             (do-template 2)
+             (sc.api/letsc 1)
+             (macrolet '(1 ((:defn)) nil)))
+           )
 
 (define-advice aggressive-indent--indent-if-changed (:around (orig-fun buffer) aggressive-indent-advice)
   (when (not (with-current-buffer buffer
@@ -1559,12 +1647,18 @@ nice keybindings
       "et" (lambda (&optional output-to-current-buffer)
              "run toplevel as clojure test; return report"
              (interactive "P")
-             (cider-interactive-eval (concat "(binding [clojure.test/*report-counters* (ref clojure.test/*initial-report-counters*)]"
-                                             "(clojure.test/test-vars [\n"
+             (cider-interactive-eval (concat "("
+                                             "binding #?(:clj [clojure.test/*report-counters* (ref clojure.test/*initial-report-counters*)] :cljs [])"
+                                             "(let [defun-to-test"
                                              (cider-defun-at-point)
+                                             "]"
+                                             "(clojure.test/test-var defun-to-test)"
+                                             "(clojure.test/test-vars [\n"
                                              "])"
-                                             "(prn @clojure.test/*report-counters*)"
-                                             "@clojure.test/*report-counters*)")
+                                             "#?(:clj (prn @clojure.test/*report-counters*))"
+                                             "#?(:clj @clojure.test/*report-counters*)"
+                                             ")"
+                                             ")")
                                      nil
                                      (cider-defun-at-point 'bounds)
                                      (cider--nrepl-pr-request-map)))
