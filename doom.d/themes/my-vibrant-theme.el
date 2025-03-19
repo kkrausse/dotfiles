@@ -1,4 +1,5 @@
 ;; doom-vibrant-theme.el --- a more vibrant version of doom-one -*- no-byte-compile: t; -*-
+;; see https://github.com/doomemacs/themes/blob/master/themes/doom-one-theme.el
 (require 'doom-themes)
 
 ;;
@@ -33,9 +34,9 @@ determine the exact padding."
   "A dark theme based off of doom-one with more vibrant colors."
 
   ;; name        gui       256       16
-  ((bg         '("grey7"   "grey7"  nil)) ;;
+  ((bg         '("grey3"   "grey3"  nil)) ;;
    (bg-alt     '("grey15"  "grey15"  nil)) ;; current line hightlighted & dired
-   (base0      '("#1c1f24" "#101010" "black"        ))
+   (base0      '("#1B2229" "black"   "black"        ))
    (base1      '("#1c1f24" "#1e1e1e" "brightblack"  ))
    (base2      '("#21272d" "#21212d" "brightblack"  ))
    (base3      '("#23272e" "#262626" "brightblack"  ))
@@ -122,7 +123,7 @@ determine the exact padding."
    (modeline-bg-inactive   (doom-darken bg 0.25))
    (modeline-bg-inactive-l `(,(doom-darken (car bg-alt) 0.2) ,@(cdr base0))))
 
-  ;; --- extra faces ------------------------
+  ;; base theme face overrides
   (((all-the-icons-dblue &override) :foreground dark-cyan)
    (centaur-tabs-unselected :background bg-alt :foreground base6)
    (elscreen-tab-other-screen-face :background "#353a42" :foreground "#1e2022")
@@ -252,23 +253,8 @@ determine the exact padding."
    (vterm-color-magenta :background (doom-lighten magenta 0.75) :foreground magenta)
    (vterm-color-cyan    :background (doom-lighten cyan 0.75)    :foreground cyan)
    (vterm-color-white   :background (doom-lighten base8 0.75)   :foreground base8)
-
-   ;(default ((t (:background "black"))))
-   ;(default :background bg)
    )
-
-
-  ;; --- extra variables --------------------
-  ;;
-  ;; ()
-   ;; taken from
-   ;;;; lsp-mode and lsp-ui-mode
-   ;; (lsp-ui-peek-highlight :foreground yellow)
-   ;; (lsp-ui-sideline-symbol-info :foreground (doom-blend comments bg 0.85)
-   ;;                              :background bg-alt)
-   ;;
-      ;;;; lsp-mode and lsp-ui-mode
-
-  )
+  ;; base theme variable overrides
+  ())
 
 ;;; doom-vibrant-theme.el ends here
