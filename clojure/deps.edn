@@ -3,19 +3,19 @@
  ;; to think of maybe a better wrokflow?
  :mvn/repos {"sonatype" {:url "https://oss.sonatype.org/content/repositories/snapshots/"}
              }
-             ;; "ekata-snapshot" {:url "https://artifactory.util.pages/artifactory/libs-snapshot-local"}
+ ;; "ekata-snapshot" {:url "https://artifactory.util.pages/artifactory/libs-snapshot-local"}
  :aliases   {:local-dev
 
              {
               ;; :extra-paths ["/Users/kevinkrausse/Documents/repos/clojure/src/clj" "/Users/kevinkrausse/Documents/repos/tools.deps/src/main/clojure"]
               :extra-deps {
-                           ;org.clojure/clojure {:mvn/version "1.10.2"}
-                           ;com.taxbit/tax-engine-core {:mvn/version "1.1.174"}
+                                        ;org.clojure/clojure {:mvn/version "1.10.2"}
+                                        ;com.taxbit/tax-engine-core {:mvn/version "1.1.174"}
                            ;; local dev version I have symlinked to ~/Documents/me/kev-nrepl
-                           #_#_                                     kevonavin/kev-repl {:git/url "https://github.com/kevonavin/kev-nrepl.git"
-                                                                                        :sha     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+                           #_#_ kevonavin/kev-repl {:git/url "https://github.com/kevonavin/kev-nrepl.git"
+                                                    :sha     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
 
-                           org.clojure/clojure                   {:mvn/version "1.12.0-alpha3"}
+                           org.clojure/clojure {:mvn/version "1.12.0-alpha3"}
                            ;;;;;;;;;;;;;; local stuff ;;;;;;;;;;;;;;;;;;;;;;;
 
                            ;; just added source paths here
@@ -30,10 +30,10 @@
                            ;; I guess this at least puts it on clojure-lsp's radar
                            ;; zkev.local/clojure-src {:local/root "/Users/kevinkrausse/Documents/repos"}
 
-                           kev.dev/clj-utils {:local/root "/Users/kevinkrausse/Documents/taxbit/clj-utils"}
+                           kev.dev/clj-utils                        {:local/root "/Users/kevinkrausse/Documents/taxbit/clj-utils"}
                            ;;;;;;;;;;;;;; end local stuff ;;;;;;;;;;;;;;;;;;;;;;;
-                           org.clojure/core.async {:git/url "https://github.com/clojure/core.async"
-                                                   :sha "ad5c0475346a0ef36e6a8623cc1d3c1b6439ef96"}
+                           org.clojure/core.async                   {:git/url "https://github.com/clojure/core.async"
+                                                                     :sha     "ad5c0475346a0ef36e6a8623cc1d3c1b6439ef96"}
                            lambdaisland/deep-diff2                  {:mvn/version "2.0.108"}
                            ;;babashka/process                         {:mvn/version "0.0.1"}
                            ;;babashka/fs                              {:mvn/version "0.0.1"}
@@ -47,15 +47,17 @@
                            vvvvalvalval/scope-capture               {:mvn/version "0.3.2"}
                            pjstadig/humane-test-output              {:mvn/version "0.11.0"}
                            ;; async profiler!
-                           com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.1.1"}
-                           djblue/portal                            {:mvn/version "0.49.1"}
+                           com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.2.2"}
+                           djblue/portal                            {:mvn/version "0.57.3"}
                            ;; this needs to be commented out sometimes because it overrides an aws transient
                            ;; dep for vilhelmina that fucks everything up
                            ;;org.clojure/tools.deps.alpha {:mvn/version "0.12.1030"}
                            vlaaad/reveal                            {:mvn/version "1.3.276"}
-                           cljfx/cljfx {:git/url "https://github.com/cljfx/cljfx" :sha "ddea0fe5e3eca5e8b53f435c43db407b10e37480"}
+                           cljfx/cljfx                              {:git/url "https://github.com/cljfx/cljfx" :sha "ddea0fe5e3eca5e8b53f435c43db407b10e37480"}
                            nrepl/nrepl                              {:mvn/version "1.1.0-alpha1"}
                            cider/cider-nrepl                        {:mvn/version "0.41.0"}
+                           com.cognitect.aws/api               {:git/url "https://github.com/cognitect-labs/aws-api"
+                                                                :sha "78ffd72aa5e721510058bddb9d1663425b7cb612"}
                            }
               :jvm-opts   ["-Xmx11g" "-Xss300m" "-XX:-OmitStackTraceInFastThrow"
                            ;; testing keystore

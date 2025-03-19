@@ -4,7 +4,9 @@
   )
 
 
+(setq kev/py-shell-interpreter "/Users/kevinkrausse/miniconda/envs/base2/bin/python")
 (setq org-roam-directory "~/Documents/repos/worknotes/org-roam")
+(setq org-roam-dailies-directory "taxbit-daily/")
 
 ;; idk what this is, came with doom
 

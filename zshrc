@@ -78,3 +78,8 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 export PATH="/usr/local/opt/libpq/bin:$PATH"
 export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
+
+source $HOME/miniconda/bin/activate
+conda activate base2
+
+source $HOME/Documents/taxbit/tax-engine-tools/bash_scripts/source.sh

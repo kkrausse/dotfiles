@@ -534,7 +534,7 @@ in `input' to get back edits made by the model"
 ;; for evil-escape package
 ;; so much better than key chord!!
 (setq-default evil-escape-key-sequence "jj")
-(setq-default evil-escape-delay 0.2)
+(setq-default evil-escape-delay 0.3)
 
 #+end_src
 
@@ -935,6 +935,12 @@ org-roam setup and shortcuts
                  ;;           (concat (make-string (- max-len (length str)) ?\s) str)))
                  (s-join "|"))))
 
+(defun kev/backlink-is-daily? (backlink)
+  (thread-last backlink
+               (org-roam-backlink-source-node)
+               (org-roam-node-file)
+               (org-roam-dailies--daily-note-p)))
+
 
 (after! org-roam
 
@@ -952,12 +958,6 @@ org-roam setup and shortcuts
                                                (propertize "${kev-parent-path}" 'face 'font-lock-comment-face)
                                                ))
   (setq kev/org-roam-node-subnode-name-cache (make-hash-table :test 'equal))
-
-  (defun kev/backlink-is-daily? (backlink)
-    (thread-last backlink
-                 (org-roam-backlink-source-node)
-                 (org-roam-node-file)
-                 (org-roam-dailies--daily-note-p)))
 
   (defun kev/roam-dailies-section (node)
     (cl-letf (((symbol-function 'org-roam-backlinks-sort) (lambda (a b)
@@ -1092,7 +1092,6 @@ org-roam setup and shortcuts
 
   ;; define some keys everywhere
   (setq org-roam-v2-ack t
-        org-roam-dailies-directory "daily/"
         org-roam-preview-function #'kev/org-roam-preview)
   org-roam-node-display-template "${title}"
   ;; this doesn't get called for some reason?
@@ -1113,6 +1112,95 @@ org-roam setup and shortcuts
   ;; then when you insert the node, you'd undo the prefix when inserting.
   ;; then you don't have to worry about having super generic titles
   )
+
+#+end_src
+
+*** subnode migration
+
+so subnodes uses subnode ids, but I wanna use like "parents" or something
+
+#+begin_src elisp
+;; oh golly
+(require 'org-roam-node)
+
+(setq testo-file "/Users/kevinkrausse/Documents/repos/worknotes/org-roam/20221129110708-taxbit.org")
+
+
+(defun kev-roam-id->link (id)
+  (concat "[[id:"
+          id
+          "]["
+          (org-roam-node-title (org-roam-node-from-id id))
+          "]]"))
+
+(defun kev-roam-name-subnodes (f)
+  (with-current-buffer (find-file-noselect f)
+    (org-mode)
+    (goto-char (point-min))
+    (org-map-entries
+     (lambda ()
+       (let ((subnodes (thread-last (org-entry-properties)
+                                    (assoc "SUBNODE_OF")
+                                    (cdr))))
+         (when subnodes
+           (org-set-property
+            "PARENTS"
+            (thread-first subnodes
+                          (string-trim)
+                          (split-string " ")
+                          (thread-last
+                            (seq-filter '(lambda (s)
+                                           (not
+                                            (string= s ""))))
+                            (seq-map #'kev-roam-id->link))
+                          (string-join " ")
+                          ))))
+       )
+     nil 'file)
+    (save-buffer)
+    ))
+
+(let ((f testo-file))
+  (with-current-buffer (find-file-noselect f)
+    (org-mode)
+    (goto-char (point-min))
+
+    (org-map-entries
+     (lambda ()
+       (let ((subnodes (thread-last (org-entry-properties)
+                                    (assoc "SUBNODE_OF")
+                                    (cdr))))
+         (when subnodes
+           (org-set-property
+            "PARENTS"
+            (thread-first subnodes
+                          (string-trim)
+                          (split-string " ")
+                          (thread-last
+                            (seq-filter '(lambda (s)
+                                           (not
+                                            (string= s ""))))
+                            (seq-map #'kev-roam-id->link))
+                          (string-join " ")
+                          ))
+           ;; (print (list
+           ;;         (substring-no-properties (org-get-heading t t t t))
+           ;;         (thread-first subnodes
+           ;;                      (string-trim)
+           ;;                      (split-string " ")
+           ;;                      (thread-last
+           ;;                        (seq-filter '(lambda (s)
+           ;;                                       (not
+           ;;                                        (string= s ""))))
+           ;;                        (seq-map #'kev-roam-id->link))
+           ;;                      (string-join " ")
+           ;;                      )
+           ;;         ))
+           ))
+       )
+     nil 'file)
+    (save-buffer)
+    ))
 
 #+end_src
 
@@ -1297,11 +1385,10 @@ org ref seems better than citar! bc
 #+begin_src elisp
 ;; lsp uses typescript-language-server
 ;; with npm i -g typescript-language-server
-(add-hook! typescript-mode
+(add-hook! typescript-mode :append
   (lsp)
   (lsp-mode 1)
-
-  (setq typescript-indent-level 4))
+  (setq typescript-indent-level 2))
 #+end_src
 
 #+RESULTS:
@@ -1562,9 +1649,9 @@ nice keybindings
              "run toplevel as clojure test; return report"
              (interactive "P")
              (cider-interactive-eval (concat "(binding [clojure.test/*report-counters* (ref clojure.test/*initial-report-counters*)]"
-                                             "(clojure.test/test-vars [\n"
+                                             "(time (clojure.test/test-vars [\n"
                                              (cider-defun-at-point)
-                                             "])"
+                                             "]))"
                                              "(prn @clojure.test/*report-counters*)"
                                              "@clojure.test/*report-counters*)")
                                      nil
