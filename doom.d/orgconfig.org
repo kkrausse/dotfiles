@@ -476,6 +476,34 @@ in `input' to get back edits made by the model"
     (term-send-up)
     (term-send-return)))
 
+(defun kev/copy-relative-file-and-lines ()
+  "Copy relative file name with Git-style line numbers (e.g., path/to/file.ext#L5-L12) to the clipboard.
+If a region is active, include line numbers. If the region has highlights, show a message."
+  (interactive)
+  (let* ((file (or buffer-file-name (dired-get-file-for-visit)))
+         (project-root (or (when (fboundp 'project-root)
+                             (let ((proj (project-current)))
+                               (when proj (project-root proj))))
+                           default-directory))
+         (relative-path (file-relative-name file project-root))
+         (start (if (use-region-p) (region-beginning) (point)))
+         (end   (if (use-region-p) (region-end) (point)))
+         (start-line (line-number-at-pos start))
+         (end-line   (line-number-at-pos (if (eq end (point-min)) end (1- end))))
+         (line-suffix (if (use-region-p)
+                          (if (= start-line end-line)
+                              (format "#L%d" start-line)
+                            (format "#L%d-L%d" start-line end-line))
+                        ""))
+         (final (concat relative-path line-suffix))
+         (highlight-overlays (cl-remove-if-not
+                              (lambda (ov) (overlay-get ov 'face))
+                              (overlays-in start end))))
+    (kill-new final)
+    (message "%s%s"
+             (if highlight-overlays "[Highlighted] " "")
+             final)))
+
 ;; just map everywhere
 (map!
  (:prefix ("SPC j" . "kevin stuff")
@@ -483,6 +511,8 @@ in `input' to get back edits made by the model"
           :nv "t" 'projectile-term
           :nv "pp" 'jet-to-clipboard
           :nv "pt" 'call-previous-term-cmd
+          (:prefix ("c" . "copy")
+           :nv "r" #'kev/copy-relative-file-and-lines)
           (:prefix ("e" . "edit")
                    :n "e" 'edit-env-file
                    :n "c" 'doom-edit-config
@@ -1012,6 +1042,7 @@ org-roam setup and shortcuts
   (setq kev/org-roam-node-subnode-name-cache (make-hash-table :test 'equal))
 
   (defun kev/backlink-is-daily? (backlink)
+    (require 'org-roam-dailies)
     (thread-last backlink
                  (org-roam-backlink-source-node)
                  (org-roam-node-file)
