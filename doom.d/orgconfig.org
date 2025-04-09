@@ -511,7 +511,7 @@ If a region is active, include line numbers. If the region has highlights, show 
           :nv "t" 'projectile-term
           :nv "pp" 'jet-to-clipboard
           :nv "pt" 'call-previous-term-cmd
-          (:prefix ("c" . "copy")
+          (:prefix ("y" . "yank")
            :nv "r" #'kev/copy-relative-file-and-lines)
           (:prefix ("e" . "edit")
                    :n "e" 'edit-env-file
