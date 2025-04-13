@@ -504,11 +504,47 @@ If a region is active, include line numbers. If the region has highlights, show 
              (if highlight-overlays "[Highlighted] " "")
              final)))
 
+
+(require 'cl-lib)
+
+(defun my-common-prefix (str1 str2)
+  "Return the longest common prefix of STR1 and STR2."
+  (let ((len (min (length str1) (length str2)))
+        (i 0))
+    (while (and (< i len)
+                (eq (aref str1 i) (aref str2 i)))
+      (setq i (1+ i)))
+    (substring str1 0 i)))
+
+(defun my-switch-to-nearest-vterm ()
+  "Switch to the vterm buffer with the longest matching directory path.
+If no vterm buffer matches the current directory, print a message and return nil."
+  (interactive)
+  (let* ((current-dir (expand-file-name default-directory))
+         (vterm-buffers (cl-remove-if-not
+                         (lambda (buf) (eq (buffer-local-value 'major-mode buf) 'vterm-mode))
+                         (buffer-list)))
+         (best-match nil)
+         (longest-match-length 0))
+    (dolist (buf vterm-buffers)
+      (let* ((buf-dir (expand-file-name (buffer-local-value 'default-directory buf)))
+             (common-prefix (my-common-prefix current-dir buf-dir))
+             (match-length (length common-prefix)))
+        (when (and common-prefix (> match-length longest-match-length))
+          (setq best-match buf)
+          (setq longest-match-length match-length))))
+    (if best-match
+        (progn
+          (switch-to-buffer best-match)
+          best-match)
+      (message "No vterm buffer found with a matching directory. try 'spc o t',")
+      nil)))
+
 ;; just map everywhere
 (map!
  (:prefix ("SPC j" . "kevin stuff")
           :nv  "i" 'kev-indent
-          :nv "t" 'projectile-term
+          :nv "t" 'my-switch-to-nearest-vterm
           :nv "pp" 'jet-to-clipboard
           :nv "pt" 'call-previous-term-cmd
           (:prefix ("y" . "yank")
