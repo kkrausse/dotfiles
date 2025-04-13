@@ -1472,19 +1472,18 @@ org ref seems better than citar! bc
       ;;     (t             . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*}"))
       bibtex-completion-notes-path nil
       )
-(use-package! org-ref
-  :defer-incrementally org-roam)
-
-;; org roam bibtex stuff
-(use-package! org-roam-bibtex
-  :after org-roam)
-(after! org-roam-bibtex
-  (require 'org-ref)
-  (setq orb-roam-ref-format 'org-ref-v3))
-(add-hook! org-mode
-  ;; could maybe restrict this to org-roam-dir but whatever
-  (org-roam-bibtex-mode 1)
-  (setq-local company-minimum-prefix-length 0))
+;; (use-package! org-ref
+;;   :defer-incrementally org-roam)
+;; ;; org roam bibtex stuff
+;; (use-package! org-roam-bibtex
+;;   :after org-roam)
+;; (after! org-roam-bibtex
+;;   (require 'org-ref)
+;;   (setq orb-roam-ref-format 'org-ref-v3))
+;; (add-hook! org-mode
+;;   ;; could maybe restrict this to org-roam-dir but whatever
+;;   (org-roam-bibtex-mode 1)
+;;   (setq-local company-minimum-prefix-length 0))
 
 
 ;; I think citar can get better than org ref at some point but just not today
