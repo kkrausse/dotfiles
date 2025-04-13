@@ -1449,39 +1449,37 @@ org ref seems better than citar! bc
 #+begin_src elisp
 ;; lsp uses typescript-language-server
 ;; with npm i -g typescript-language-server
-(add-hook! typescript-mode
-  (lsp)
-  (lsp-mode 1)
+;; (add-hook! typescript-mode
+;;   (lsp)
+;;   (lsp-mode 1)
 
-  (setq typescript-indent-level 2))
+;;   (setq typescript-indent-level 2))
+
 #+end_src
 
 #+RESULTS:
 
 update: should really just use emacs' lsp-mode for this
 
+i think this should be handled so commented, hook adding issues maybe
 #+begin_src elisp
-(add-hook! js2-mode
-           (lsp)
-           (lsp-mode 1))
+;; (add-hook! js2-mode
+;;            (lsp)
+;;            (lsp-mode 1))
 
-(map! :mode js2-mode
-      :localleader
-      (:prefix ("g" . "goto...")
-      "g" 'js2-jump-to-definition
-      "b" #'pop-tag-mark))
+;; (map! :mode js2-mode
+;;       :localleader
+;;       (:prefix ("g" . "goto...")
+;;       "g" 'js2-jump-to-definition
+;;       "b" #'pop-tag-mark))
 
+;; for skewer, like a repl type thing for js
+;; (map! :mode skewer
+;;       (:prefix (",e" . "skewer eval")
+;;        "d" 'skewer-eval-defun))
 #+end_src
 
-for skewer, like a repl type thing for js
 
-#+begin_src elisp
-
-(map! :mode skewer
-      (:prefix (",e" . "skewer eval")
-       "d" 'skewer-eval-defun))
-
-#+end_src
 
 #+RESULTS:
 
