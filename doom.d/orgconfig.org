@@ -158,6 +158,165 @@ and make multi-term use it
            'doom-modeline-mode)
 #+end_src
 * My Plugins
+** note sync
+#+begin_src elisp
+(require 'request)
+(require 'json)
+(require 'cl)
+
+(defvar kev/note-sync-server
+  "https://kkrausse.com"
+  ;; "http://localhost:3000"
+  )
+
+(defvar kev/note-sync-headline-prefix "sync: ")
+
+(defvar kev/note-sync-heading "[[id:1670d5bd-1ab6-4ff6-87fd-a09de71f100b][browser synced]]")
+
+(defun kev/org-header-post-props (el)
+  "note the header needs to be parsed via parsetree"
+  (thread-last el
+               (org-element-contents) ;; section
+               (car)
+               (org-element-contents) ;; maybe property drawer
+               (car)
+               ((lambda (pdrawer)
+                  (if (eq 'property-drawer (org-element-type pdrawer))
+                      (org-element-end pdrawer)
+                    (org-element-contents-begin el))))))
+
+(defun kev/note-sync-fetch-notes ()
+  (let ((response
+         (request
+           (concat kev/note-sync-server "/note/api/notes")
+           :type "GET"
+           :sync t
+           :timeout 5
+           :headers '(("Content-Type" . "application/json"))
+           :data (json-encode `((api_key . ,kev/note-sync-api-key)))
+           :parser 'json-read
+           :success (cl-function
+                     (lambda (&key data &allow-other-keys)
+                       (message "Received data: %S" data))))))
+    (when (request-response-error-thrown response)
+      (error "Request error: %S" (request-response-error-thrown response)))
+    (request-response-data response)))
+
+(defun kev/replace-or-create-heading (file heading-subs content)
+  (with-current-buffer (find-file-noselect file)
+      ;; Ensure we're in Org mode
+      (unless (derived-mode-p 'org-mode)
+        (org-mode))
+      ;; Parse the buffer into an Org element structure
+      (let* ((ast (org-element-parse-buffer))
+             ;; Search for the heading
+             (heading (org-element-map ast 'headline
+                        (lambda (hl)
+                          (when (string-match-p (regexp-quote heading-subs)
+                                                (org-element-property :raw-value hl))
+                            hl))
+                        nil t)))
+        (if heading
+            ;; If heading exists, replace its content
+            (let ((begin (kev/org-header-post-props heading))
+                  (end (org-element-contents-end heading)))
+              (if (and begin end)
+                  (progn
+                    ;; Delete existing content
+                    (goto-char begin)
+                    (delete-region begin (- end 1)))
+                ;; No existing content, move to after heading
+                (goto-char (org-element-property :end heading)))
+              ;; Insert new content
+              (insert content)
+              (message "Updated content under existing heading."))
+          ;; If heading doesn't exist, create it at the end
+          (goto-char (point-max))
+          (unless (bolp) (insert "\n"))
+          ;; Insert new heading
+          (insert (format "* %s\n" heading-subs))
+          ;; Insert new content
+          (insert content)
+          (message "Created new heading and inserted content.")))
+      ;; (save-buffer)
+      ))
+
+(defun kev/note-sync-post! ()
+  (interactive)
+  (let* ((notes
+          (thread-last (org-element-map (org-element-parse-buffer) 'headline
+                         (lambda (hl)
+                           (when (string-match-p (regexp-quote kev/note-sync-headline-prefix)
+                                                 (org-element-property :raw-value hl))
+                             hl)))
+                       (mapcar (lambda (x)
+                                 `(("note_title" .
+                                    ,(substring (org-element-property :raw-value x)
+                                                (length kev/note-sync-headline-prefix)))
+                                   ("note_content" .
+                                    ,(buffer-substring-no-properties (kev/org-header-post-props x)
+                                                                     (org-element-contents-end x))))))))
+         (body (json-encode `((notes . ,notes)
+                              (api_key . ,kev/note-sync-api-key))))
+         (response
+          (request
+            (concat kev/note-sync-server "/note/api/notes")
+            :type "POST"
+            :sync t
+            :timeout 10
+            :headers '(("Content-Type" . "application/json"))
+            :data body
+            :parser 'json-read
+            :success (cl-function
+                      (lambda (&key data &allow-other-keys)
+                        (message "Received data: %S" data))))))
+    (when (request-response-error-thrown response)
+      (error "Request error: %S" (request-response-error-thrown response)))
+    (request-response-data response)))
+
+(defun kev/note-sync-dump! ()
+  (interactive)
+  (thread-last (kev/note-sync-fetch-notes)
+               (alist-get 'notes)
+               (mapcar (lambda (note)
+                         (let* ((title (alist-get 'note_title note))
+                                (content (alist-get 'note_content note))
+                                (this-title (concat kev/note-sync-headline-prefix title)))
+                           (kev/replace-or-create-heading buffer-file-name this-title content)
+                           (kev/roam-subnode-create (org-roam-node-from-id "f68f85df-9d57-4d9f-ba66-c8c2e5670aaf"))
+                           (when-let ((parent (org-roam-node-from-title-or-alias title)))
+                             (kev/roam-subnode-create parent)))))))
+
+;; ref for parsing and getting element at point
+(defun kev/org-headline (el &optional parsetree)
+  (let ((parsetree (or parsetree (org-element-parse-buffer))))
+    (org-element-map parsetree
+        'headline
+        (lambda (x)
+          (when (equal (org-element-begin x)
+                       (org-element-begin el))
+            x))
+      nil t)))
+
+(defun kev/note-sync-current ()
+  (interactive)
+  (let ((node (save-excursion
+                     (when (org-roam-dailies--daily-note-p (buffer-file-name))
+                       (goto-char (point-min))
+                       (org-roam-node-at-point)))))
+    (if (null node)
+        (message "could not find associated daily node")
+      (let* ((note-title (org-roam-node-title node))
+        (file (org-roam-node-file node))
+        (r (kev/note-sync-fetch-notes))
+        (pulled-content (thread-last r
+                                     (alist-get 'notes)
+                                     (seq-filter (lambda (x)
+                                                   (equal note-title (alist-get 'note_title x))))
+                                     (car)
+                                     (alist-get 'note_content))))
+    (kev/replace-or-create-heading file kev/note-sync-heading pulled-content)))))
+#+end_src
 ** ellama
 #+begin_src elisp
 ;; NOTE will eval NOW if package already loaded
