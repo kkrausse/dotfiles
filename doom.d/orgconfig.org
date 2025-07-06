@@ -635,16 +635,12 @@ in `input' to get back edits made by the model"
     (term-send-up)
     (term-send-return)))
 
-(defun kev/copy-relative-file-and-lines ()
-  "Copy relative file name with Git-style line numbers (e.g., path/to/file.ext#L5-L12) to the clipboard.
+(defun kev--copy-file-path-with-lines (path-fn)
+  "Copy file path with Git-style line numbers (e.g., path/to/file.ext#L5-L12) to the clipboard.
+PATH-FN is a function that takes FILE and returns the desired file path string.
 If a region is active, include line numbers. If the region has highlights, show a message."
-  (interactive)
   (let* ((file (or buffer-file-name (dired-get-file-for-visit)))
-         (project-root (or (when (fboundp 'project-root)
-                             (let ((proj (project-current)))
-                               (when proj (project-root proj))))
-                           default-directory))
-         (relative-path (file-relative-name file project-root))
+         (path (funcall path-fn file))
          (start (if (use-region-p) (region-beginning) (point)))
          (end   (if (use-region-p) (region-end) (point)))
          (start-line (line-number-at-pos start))
@@ -654,7 +650,7 @@ If a region is active, include line numbers. If the region has highlights, show 
                               (format "#L%d" start-line)
                             (format "#L%d-L%d" start-line end-line))
                         ""))
-         (final (concat relative-path line-suffix))
+         (final (concat path line-suffix))
          (highlight-overlays (cl-remove-if-not
                               (lambda (ov) (overlay-get ov 'face))
                               (overlays-in start end))))
@@ -662,6 +658,25 @@ If a region is active, include line numbers. If the region has highlights, show 
     (message "%s%s"
              (if highlight-overlays "[Highlighted] " "")
              final)))
+
+(defun kev/copy-relative-file-and-lines ()
+  "Copy relative file name with Git-style line numbers (e.g., path/to/file.ext#L5-L12) to the clipboard.
+If a region is active, include line numbers. If the region has highlights, show a message."
+  (interactive)
+  (kev--copy-file-path-with-lines
+   (lambda (file)
+     (let ((project-root (or (when (fboundp 'project-root)
+                               (let ((proj (project-current)))
+                                 (when proj (project-root proj))))
+                             default-directory)))
+       (file-relative-name file project-root)))))
+
+(defun kev/copy-absolute-file-and-lines ()
+  "Copy absolute file name with Git-style line numbers (e.g., /path/to/file.ext#L5-L12) to the clipboard.
+If a region is active, include line numbers. If the region has highlights, show a message."
+  (interactive)
+  (kev--copy-file-path-with-lines
+   (lambda (file) (expand-file-name file))))
 
 
 (require 'cl-lib)
@@ -676,28 +691,33 @@ If a region is active, include line numbers. If the region has highlights, show 
     (substring str1 0 i)))
 
 (defun my-switch-to-nearest-vterm ()
-  "Switch to the vterm buffer with the longest matching directory path.
-If no vterm buffer matches the current directory, print a message and return nil."
+  "Switch to a vterm buffer whose default-directory is exactly the parent of the current buffer's default-directory.
+If no such vterm buffer exists, print a message and return nil."
   (interactive)
   (let* ((current-dir (expand-file-name default-directory))
+         (parent-dir (file-name-directory (directory-file-name current-dir)))
          (vterm-buffers (cl-remove-if-not
                          (lambda (buf) (eq (buffer-local-value 'major-mode buf) 'vterm-mode))
                          (buffer-list)))
-         (best-match nil)
-         (longest-match-length 0))
+         (matching-vterm-dir nil)
+         (matching-vterm nil))
     (dolist (buf vterm-buffers)
-      (let* ((buf-dir (expand-file-name (buffer-local-value 'default-directory buf)))
-             (common-prefix (my-common-prefix current-dir buf-dir))
-             (match-length (length common-prefix)))
-        (when (and common-prefix (> match-length longest-match-length))
-          (setq best-match buf)
-          (setq longest-match-length match-length))))
-    (if best-match
+      (let ((buf-dir (expand-file-name (buffer-local-value 'default-directory buf))))
+        (when (and (string-prefix-p buf-dir parent-dir)
+                   (< (length matching-vterm-dir) (length buf-dir)))
+          (setq matching-vterm buf))))
+    (if matching-vterm
         (progn
-          (switch-to-buffer best-match)
-          best-match)
+          (switch-to-buffer matching-vterm)
+          matching-vterm)
       (message "No vterm buffer found with a matching directory. try 'spc o t',")
       nil)))
+
+(after! vterm
+  (setq vterm-tramp-shells
+        (append vterm-tramp-shells
+                '(("ssh" "/bin/zsh")
+                  ("sudo" "/bin/bash")))) )
 
 ;; just map everywhere
 (map!
@@ -707,7 +727,8 @@ If no vterm buffer matches the current directory, print a message and return nil
           :nv "pp" 'jet-to-clipboard
           :nv "pt" 'call-previous-term-cmd
           (:prefix ("y" . "yank")
-           :nv "r" #'kev/copy-relative-file-and-lines)
+           :nv "r" #'kev/copy-relative-file-and-lines
+           :nv "a" #'kev/copy-absolute-file-and-lines)
           (:prefix ("e" . "edit")
                    :n "e" 'edit-env-file
                    :n "c" 'doom-edit-config
