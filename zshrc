@@ -72,28 +72,3 @@ run_if_command_exists go \
 
 run_if_command_exists python3 \
   export PATH="$(python3 -m site --user-base)/bin:$PATH"
-
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-
-# >>> conda initialize >>>
-# !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/Users/kevinkrausse/miniforge3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-else
-    if [ -f "/Users/kevinkrausse/miniforge3/etc/profile.d/conda.sh" ]; then
-        . "/Users/kevinkrausse/miniforge3/etc/profile.d/conda.sh"
-    else
-        export PATH="/Users/kevinkrausse/miniforge3/bin:$PATH"
-    fi
-fi
-unset __conda_setup
-
-if [ -f "/Users/kevinkrausse/miniforge3/etc/profile.d/mamba.sh" ]; then
-    . "/Users/kevinkrausse/miniforge3/etc/profile.d/mamba.sh"
-fi
-# <<< conda initialize <<<
-
-mamba activate base2
