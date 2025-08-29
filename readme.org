@@ -70,8 +70,7 @@ need cmake for vterm in emacs:
 
 #+begin_src bash
 # for cmake and libtools for vterm
-brew install cmake
-brew install libtool
+brew install cmake libvterm
 # clojure
 # make sure you install sdkman and get a java version you like
 brew install clojure/tools/clojure

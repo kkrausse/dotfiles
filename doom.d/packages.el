@@ -34,6 +34,9 @@
 (package! key-chord)
 (package! evil-escape)
 
+;; logging
+(package! command-log-mode)
+
 ;; make it so terminal colors arent shit
 (package! solaire-mode :disable t)
 

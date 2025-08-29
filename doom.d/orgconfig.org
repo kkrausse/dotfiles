@@ -712,17 +712,45 @@ If no such vterm buffer exists, print a message and return nil."
       (message "No vterm buffer found with a matching directory. try 'spc o t',")
       nil)))
 
+(after! command-log-mode
+  (add-to-list 'display-buffer-alist
+               '("\\*command-log\\*"
+                 (display-buffer-same-window)))
+  (add-hook 'command-log-mode-hook
+            (lambda ()
+              (when (string= (buffer-name) "*command-log*")
+                (command-log-mode -1))))
+  )
+
+;; vterm stuff
 (after! vterm
+
+  ;; NOTE this was experiment. see if we could have more interractive term.
+  ;; might wanna keep some of the escape / C-c stuff
+  ;;
+  ;; (setq vterm-keymap-exceptions '("C-x" "C-u" "C-g" "C-h" "C-l" "M-x" "M-o" "C-y" "M-y"))
+  ;; (map! :map vterm-mode-map
+  ;;       :i "<escape>" #'vterm--self-insert
+  ;;       :i "<S-escape>" #'evil-normal-state)
+
+
+  ;; temp for debug. do uncomment
   (setq vterm-tramp-shells
         (append vterm-tramp-shells
                 '(("ssh" "/bin/zsh")
-                  ("sudo" "/bin/bash")))) )
+                  ("sudo" "/bin/bash"))))
+  )
+;; idea:
+;; turn on ultra key logging / debug info
+;; - pastable into llm
+;; - llm really good at debugging burried patterns / issues so figure whats up
+;; bc it'd be too tedious to do low level debugging like that?
 
 ;; just map everywhere
 (map!
  (:prefix ("SPC j" . "kevin stuff")
           :nv  "i" 'kev-indent
-          :nv "t" 'my-switch-to-nearest-vterm
+          :nv "t" 'projectile-term ;'my-switch-to-nearest-vterm
           :nv "pp" 'jet-to-clipboard
           :nv "pt" 'call-previous-term-cmd
           (:prefix ("y" . "yank")
