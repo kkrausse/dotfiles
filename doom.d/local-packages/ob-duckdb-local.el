@@ -1,6 +1,18 @@
-;; ob-duckdb-local.el - Local copy of ob-duckdb for Doom Emacs
-;; Source: https://github.com/smurp/ob-duckdb
+;;; ob-duckdb.el --- Babel Functions for DuckDB Databases -*- lexical-binding: t; -*-
+
+;; Copyright (C) 2010-2024 Free Software Foundation, Inc.
+
+;; Author: Shawn Murphy <smurp@smurp.com>
+;; Keywords: literate programming, reproducible research
+;; URL: https://github.com/smurp/ob-duckdb
 ;; Based on ob-sqlite.el by Eric Schulte and Nick Savage
+
+;; ;; You should have received a copy of the GNU General Public License
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
+
+;;; Commentary:
+
+;; Org-Babel support for evaluating duckdb source code.
 
 ;;; Code:
 
@@ -29,7 +41,7 @@
     (list      . :any)
     (separator . :any)
     (nullvalue . :any))
-  "DuckDB specific header args.")
+  "DuckDB specific header args.") ;; TODO update from the SQLite orig
 
 (defun org-babel-expand-body:duckdb (body params)
   "Expand BODY according to the values of PARAMS."
@@ -130,4 +142,6 @@ Prepare SESSION according to the header arguments specified in PARAMS."
   "Process CELL to remove unnecessary characters."
   (org-babel-read cell t))
 
-(provide 'ob-duckdb-local)
+(provide 'ob-duckdb)
+
+;;; ob-duckdb.el ends here)
