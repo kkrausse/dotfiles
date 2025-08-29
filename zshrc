@@ -48,27 +48,3 @@ export PS1="%F{green}$ %f"
 #idk if this needed
 # export PATH="/usr/local/opt/ruby/bin:$PATH"
 # export PATH="/usr/local/lib/ruby/gems/3.0.0/bin:$PATH"
-export PATH="/opt/homebrew/opt/texinfo/bin:$PATH"
-
-##### machine / fs specific #########
-
-#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
-export SDKMAN_DIR="$HOME/.sdkman"
-[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
-
-function run_if_command_exists {
-    local command_to_check="$1"
-    shift
-    if command -v "$command_to_check" >/dev/null 2>&1; then
-        "$@"
-    else
-        echo "-- ignoring $command_to_check stuff"
-    fi
-}
-
-# go stuff
-run_if_command_exists go \
-  export PATH="$(go env GOPATH)/bin:$PATH";
-
-run_if_command_exists python3 \
-  export PATH="$(python3 -m site --user-base)/bin:$PATH"

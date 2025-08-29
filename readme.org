@@ -45,7 +45,8 @@ git clone --branch emacs-28.2 --depth 1 https://github.com/emacs-mirror/emacs do
 cd dotfiles
 ln -s $(pwd)/doom.d/ ~/.doom.d
 ln -s $(pwd)/vimrc ~/.vimrc
-ln -s $(pwd)/zshrc ~/.zshrc
+# nah this is dumb ln -s $(pwd)/zshrc ~/.zshrc
+
 ln -s $(pwd)/gitconfig ~/.gitconfig
 # clojure specific
 ln -s $(pwd)/lsp ~/.lsp
@@ -102,4 +103,63 @@ _kuc() {
 }
 
 complete -F _kuc kuc
+#+end_src
+
+* mac setup
+
+** access to git / github to clone this
+  - install mac dev tools
+** vim
+# vim vinegar
+mkdir -p ~/.vim/pack/tpope/start/vim-vinegar/
+git clone https://github.com/tpope/vim-vinegar.git ~/.vim/pack/tpope/start/vim-vinegar/
+
+cd dotfiles
+ln -s $(pwd)/doom.d/ ~/.doom.d
+ln -s $(pwd)/vimrc ~/.vimrc
+
+- install homebrew
+- install https://github.com/ohmyzsh/ohmyzsh/
+  - =git clone https://github.com/joshskidmore/zsh-fzf-history-search.git ~/.zsh/plugins/zsh-fzf-history-search=
+  - requires =brew install fzf=
+  - =echo "source $(pwd)/zshrc" >> ~/.zshrc=
+** install emacs
+  
+  see https://github.com/d12frosted/homebrew-emacs-plus#install
+
+  =brew tap d12frosted/emacs-plus=
+  =brew install emacs-plus@30 --with-ctags --with-xwidgets=
+note, default native comp
+
+doom
+  - doom (symlink doom.d first!) https://github.com/doomemacs/doomemacs#install
+    - =ln -s $(pwd)/doom.d/ ~/.doom.d=
+    - PROBLEM: texinfo is old, so maybe do this? =brew ln texinfo --force=
+
+
+old shsh
+#+begin_src sh
+
+# for emacs c source file
+git clone --branch emacs-28.2 --depth 1 https://github.com/emacs-mirror/emacs doom.d/repos/emacs
+
+# vim vinegar
+mkdir -p ~/.vim/pack/tpope/start/vim-vinegar/
+git clone https://github.com/tpope/vim-vinegar.git ~/.vim/pack/tpope/start/vim-vinegar/
+
+
+cd dotfiles
+ln -s $(pwd)/doom.d/ ~/.doom.d
+ln -s $(pwd)/vimrc ~/.vimrc
+
+# nah this is dumb ln -s $(pwd)/zshrc ~/.zshrc -- instead:
+echo "source $(pwd)/zshrc" >> ~/.zshrc
+
+ln -s $(pwd)/gitconfig ~/.gitconfig
+# clojure specific
+ln -s $(pwd)/lsp ~/.lsp
+ln -s $(pwd)/clj-kondo ~/.clj-kondo
+ln -s $(pwd)/clojure ~/.clojure
+# idk if even needed
+ln -s $(pwd)/bin ~/.bin
 #+end_src
