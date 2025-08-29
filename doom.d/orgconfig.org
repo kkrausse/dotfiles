@@ -539,7 +539,14 @@ in `input' to get back edits made by the model"
  :states '(normal visual)
  :keymaps 'global
  :prefix "SPC"
- "k" 'kevin-paredit-mode)
+  "k" 'kevin-paredit-mode)
+#+end_src
+** ob-duckdb
+#+begin_src elisp
+;; Load ob-duckdb from external file
+(with-eval-after-load 'ob
+  (load-file (expand-file-name "local-packages/ob-duckdb-local.el" doom-user-dir))
+  (add-to-list 'org-babel-load-languages '(duckdb . t)))
 #+end_src
 
 * General Setup
