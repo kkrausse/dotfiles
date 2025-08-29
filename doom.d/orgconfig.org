@@ -84,10 +84,9 @@ notes:
 
 ;; I think needed for env vars in the shell?
 ;; might actuall not be
-(use-package! exec-path-from-shell :defer t)
+(use-package! exec-path-from-shell :defer nil)
 (after! exec-path-from-shell
-  (dolist (var '("JAVA_HOME"))
-    (add-to-list 'exec-path-from-shell-variables var))
+  (setq exec-path-from-shell-variables '("PATH" "NVM_DIR" "JAVA_HOME"))
   (exec-path-from-shell-initialize))
 #+end_src
 
@@ -1853,11 +1852,7 @@ nice keybindings
                (lsp-format-buffer)
                (clojure-align (point-min) (point-max))))
 
-           (define-clojure-indent
-             (into 1)
-             (do-template 2)
-             (sc.api/letsc 1)
-             (macrolet '(1 ((:defn)) nil)))
+           ;; (define-clojure-indent (into 1) (do-template 2) (sc.api/letsc 1) (macrolet '(1 ((:defn)) nil)))
            )
 
 (define-advice aggressive-indent--indent-if-changed (:around (orig-fun buffer) aggressive-indent-advice)
