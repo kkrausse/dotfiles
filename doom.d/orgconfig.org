@@ -552,6 +552,15 @@ in `input' to get back edits made by the model"
 (add-to-list 'org-src-lang-modes '("duckdb" . sql))
 #+end_src
 
+** csv-mode
+#+begin_src elisp
+;; Configure csv-mode
+(after! csv-mode
+  (add-hook! csv-mode
+    (csv-align-mode 1)
+    (setq-local truncate-lines t)))
+#+end_src
+
 * General Setup
 ** remote shells
 #+begin_src elisp

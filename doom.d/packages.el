@@ -123,6 +123,8 @@
            :host nil
            :repo "https://github.com/emacs-citar/citar-org-roam.git"))
 
+(package! csv-mode)
+
 ;; You can override the recipe of a built in package without having to specify
 ;; all the properties for `:recipe'. These will inherit the rest of its recipe
 ;; from Doom or MELPA/ELPA/Emacsmirror:
