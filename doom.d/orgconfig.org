@@ -547,6 +547,9 @@ in `input' to get back edits made by the model"
 (with-eval-after-load 'ob
   (load-file (expand-file-name "local-packages/ob-duckdb-local.el" doom-user-dir))
   (add-to-list 'org-babel-load-languages '(duckdb . t)))
+
+;; Configure syntax highlighting for duckdb blocks as SQL
+(add-to-list 'org-src-lang-modes '("duckdb" . sql))
 #+end_src
 
 * General Setup

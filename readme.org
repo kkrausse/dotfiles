@@ -1,3 +1,9 @@
+* dotfiles
+
+** assumed setup
+- emacs with doom and doom.d configs symlinked here
+
+** updating new computer
 copy over zsh history
 
 fudgeups:
