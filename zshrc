@@ -73,6 +73,7 @@ run_if_command_exists go \
 run_if_command_exists python3 \
   export PATH="$(python3 -m site --user-base)/bin:$PATH"
 
+# uh need to fix this grbg to not be checked in
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion

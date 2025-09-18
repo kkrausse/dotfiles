@@ -158,6 +158,165 @@ and make multi-term use it
            'doom-modeline-mode)
 #+end_src
 * My Plugins
+** note sync
+#+begin_src elisp
+(require 'request)
+(require 'json)
+(require 'cl)
+
+(defvar kev/note-sync-server
+  "https://kkrausse.com"
+  ;; "http://localhost:3000"
+  )
+
+(defvar kev/note-sync-headline-prefix "sync: ")
+
+(defvar kev/note-sync-heading "[[id:1670d5bd-1ab6-4ff6-87fd-a09de71f100b][browser synced]]")
+
+(defun kev/org-header-post-props (el)
+  "note the header needs to be parsed via parsetree"
+  (thread-last el
+               (org-element-contents) ;; section
+               (car)
+               (org-element-contents) ;; maybe property drawer
+               (car)
+               ((lambda (pdrawer)
+                  (if (eq 'property-drawer (org-element-type pdrawer))
+                      (org-element-end pdrawer)
+                    (org-element-contents-begin el))))))
+
+(defun kev/note-sync-fetch-notes ()
+  (let ((response
+         (request
+           (concat kev/note-sync-server "/note/api/notes")
+           :type "GET"
+           :sync t
+           :timeout 5
+           :headers '(("Content-Type" . "application/json"))
+           :data (json-encode `((api_key . ,kev/note-sync-api-key)))
+           :parser 'json-read
+           :success (cl-function
+                     (lambda (&key data &allow-other-keys)
+                       (message "Received data: %S" data))))))
+    (when (request-response-error-thrown response)
+      (error "Request error: %S" (request-response-error-thrown response)))
+    (request-response-data response)))
+
+(defun kev/replace-or-create-heading (file heading-subs content)
+  (with-current-buffer (find-file-noselect file)
+      ;; Ensure we're in Org mode
+      (unless (derived-mode-p 'org-mode)
+        (org-mode))
+      ;; Parse the buffer into an Org element structure
+      (let* ((ast (org-element-parse-buffer))
+             ;; Search for the heading
+             (heading (org-element-map ast 'headline
+                        (lambda (hl)
+                          (when (string-match-p (regexp-quote heading-subs)
+                                                (org-element-property :raw-value hl))
+                            hl))
+                        nil t)))
+        (if heading
+            ;; If heading exists, replace its content
+            (let ((begin (kev/org-header-post-props heading))
+                  (end (org-element-contents-end heading)))
+              (if (and begin end)
+                  (progn
+                    ;; Delete existing content
+                    (goto-char begin)
+                    (delete-region begin (- end 1)))
+                ;; No existing content, move to after heading
+                (goto-char (org-element-property :end heading)))
+              ;; Insert new content
+              (insert content)
+              (message "Updated content under existing heading."))
+          ;; If heading doesn't exist, create it at the end
+          (goto-char (point-max))
+          (unless (bolp) (insert "\n"))
+          ;; Insert new heading
+          (insert (format "* %s\n" heading-subs))
+          ;; Insert new content
+          (insert content)
+          (message "Created new heading and inserted content.")))
+      ;; (save-buffer)
+      ))
+
+(defun kev/note-sync-post! ()
+  (interactive)
+  (let* ((notes
+          (thread-last (org-element-map (org-element-parse-buffer) 'headline
+                         (lambda (hl)
+                           (when (string-match-p (regexp-quote kev/note-sync-headline-prefix)
+                                                 (org-element-property :raw-value hl))
+                             hl)))
+                       (mapcar (lambda (x)
+                                 `(("note_title" .
+                                    ,(substring (org-element-property :raw-value x)
+                                                (length kev/note-sync-headline-prefix)))
+                                   ("note_content" .
+                                    ,(buffer-substring-no-properties (kev/org-header-post-props x)
+                                                                     (org-element-contents-end x))))))))
+         (body (json-encode `((notes . ,notes)
+                              (api_key . ,kev/note-sync-api-key))))
+         (response
+          (request
+            (concat kev/note-sync-server "/note/api/notes")
+            :type "POST"
+            :sync t
+            :timeout 10
+            :headers '(("Content-Type" . "application/json"))
+            :data body
+            :parser 'json-read
+            :success (cl-function
+                      (lambda (&key data &allow-other-keys)
+                        (message "Received data: %S" data))))))
+    (when (request-response-error-thrown response)
+      (error "Request error: %S" (request-response-error-thrown response)))
+    (request-response-data response)))
+
+(defun kev/note-sync-dump! ()
+  (interactive)
+  (thread-last (kev/note-sync-fetch-notes)
+               (alist-get 'notes)
+               (mapcar (lambda (note)
+                         (let* ((title (alist-get 'note_title note))
+                                (content (alist-get 'note_content note))
+                                (this-title (concat kev/note-sync-headline-prefix title)))
+                           (kev/replace-or-create-heading buffer-file-name this-title content)
+                           (kev/roam-subnode-create (org-roam-node-from-id "f68f85df-9d57-4d9f-ba66-c8c2e5670aaf"))
+                           (when-let ((parent (org-roam-node-from-title-or-alias title)))
+                             (kev/roam-subnode-create parent)))))))
+
+;; ref for parsing and getting element at point
+(defun kev/org-headline (el &optional parsetree)
+  (let ((parsetree (or parsetree (org-element-parse-buffer))))
+    (org-element-map parsetree
+        'headline
+        (lambda (x)
+          (when (equal (org-element-begin x)
+                       (org-element-begin el))
+            x))
+      nil t)))
+
+(defun kev/note-sync-current ()
+  (interactive)
+  (let ((node (save-excursion
+                     (when (org-roam-dailies--daily-note-p (buffer-file-name))
+                       (goto-char (point-min))
+                       (org-roam-node-at-point)))))
+    (if (null node)
+        (message "could not find associated daily node")
+      (let* ((note-title (org-roam-node-title node))
+        (file (org-roam-node-file node))
+        (r (kev/note-sync-fetch-notes))
+        (pulled-content (thread-last r
+                                     (alist-get 'notes)
+                                     (seq-filter (lambda (x)
+                                                   (equal note-title (alist-get 'note_title x))))
+                                     (car)
+                                     (alist-get 'note_content))))
+    (kev/replace-or-create-heading file kev/note-sync-heading pulled-content)))))
+#+end_src
 ** ellama
 #+begin_src elisp
 ;; NOTE will eval NOW if package already loaded
@@ -476,13 +635,100 @@ in `input' to get back edits made by the model"
     (term-send-up)
     (term-send-return)))
 
+(defun kev--copy-file-path-with-lines (path-fn)
+  "Copy file path with Git-style line numbers (e.g., path/to/file.ext#L5-L12) to the clipboard.
+PATH-FN is a function that takes FILE and returns the desired file path string.
+If a region is active, include line numbers. If the region has highlights, show a message."
+  (let* ((file (or buffer-file-name (dired-get-file-for-visit)))
+         (path (funcall path-fn file))
+         (start (if (use-region-p) (region-beginning) (point)))
+         (end   (if (use-region-p) (region-end) (point)))
+         (start-line (line-number-at-pos start))
+         (end-line   (line-number-at-pos (if (eq end (point-min)) end (1- end))))
+         (line-suffix (if (use-region-p)
+                          (if (= start-line end-line)
+                              (format "#L%d" start-line)
+                            (format "#L%d-L%d" start-line end-line))
+                        ""))
+         (final (concat path line-suffix))
+         (highlight-overlays (cl-remove-if-not
+                              (lambda (ov) (overlay-get ov 'face))
+                              (overlays-in start end))))
+    (kill-new final)
+    (message "%s%s"
+             (if highlight-overlays "[Highlighted] " "")
+             final)))
+
+(defun kev/copy-relative-file-and-lines ()
+  "Copy relative file name with Git-style line numbers (e.g., path/to/file.ext#L5-L12) to the clipboard.
+If a region is active, include line numbers. If the region has highlights, show a message."
+  (interactive)
+  (kev--copy-file-path-with-lines
+   (lambda (file)
+     (let ((project-root (or (when (fboundp 'project-root)
+                               (let ((proj (project-current)))
+                                 (when proj (project-root proj))))
+                             default-directory)))
+       (file-relative-name file project-root)))))
+
+(defun kev/copy-absolute-file-and-lines ()
+  "Copy absolute file name with Git-style line numbers (e.g., /path/to/file.ext#L5-L12) to the clipboard.
+If a region is active, include line numbers. If the region has highlights, show a message."
+  (interactive)
+  (kev--copy-file-path-with-lines
+   (lambda (file) (expand-file-name file))))
+
+
+(require 'cl-lib)
+
+(defun my-common-prefix (str1 str2)
+  "Return the longest common prefix of STR1 and STR2."
+  (let ((len (min (length str1) (length str2)))
+        (i 0))
+    (while (and (< i len)
+                (eq (aref str1 i) (aref str2 i)))
+      (setq i (1+ i)))
+    (substring str1 0 i)))
+
+(defun my-switch-to-nearest-vterm ()
+  "Switch to a vterm buffer whose default-directory is exactly the parent of the current buffer's default-directory.
+If no such vterm buffer exists, print a message and return nil."
+  (interactive)
+  (let* ((current-dir (expand-file-name default-directory))
+         (parent-dir (file-name-directory (directory-file-name current-dir)))
+         (vterm-buffers (cl-remove-if-not
+                         (lambda (buf) (eq (buffer-local-value 'major-mode buf) 'vterm-mode))
+                         (buffer-list)))
+         (matching-vterm-dir nil)
+         (matching-vterm nil))
+    (dolist (buf vterm-buffers)
+      (let ((buf-dir (expand-file-name (buffer-local-value 'default-directory buf))))
+        (when (and (string-prefix-p buf-dir parent-dir)
+                   (< (length matching-vterm-dir) (length buf-dir)))
+          (setq matching-vterm buf))))
+    (if matching-vterm
+        (progn
+          (switch-to-buffer matching-vterm)
+          matching-vterm)
+      (message "No vterm buffer found with a matching directory. try 'spc o t',")
+      nil)))
+
+(after! vterm
+  (setq vterm-tramp-shells
+        (append vterm-tramp-shells
+                '(("ssh" "/bin/zsh")
+                  ("sudo" "/bin/bash")))) )
+
 ;; just map everywhere
 (map!
  (:prefix ("SPC j" . "kevin stuff")
           :nv  "i" 'kev-indent
-          :nv "t" 'projectile-term
+          :nv "t" 'my-switch-to-nearest-vterm
           :nv "pp" 'jet-to-clipboard
           :nv "pt" 'call-previous-term-cmd
+          (:prefix ("y" . "yank")
+           :nv "r" #'kev/copy-relative-file-and-lines
+           :nv "a" #'kev/copy-absolute-file-and-lines)
           (:prefix ("e" . "edit")
                    :n "e" 'edit-env-file
                    :n "c" 'doom-edit-config
@@ -1018,6 +1264,7 @@ org-roam setup and shortcuts
   (setq kev/org-roam-node-subnode-name-cache (make-hash-table :test 'equal))
 
   (defun kev/backlink-is-daily? (backlink)
+    (require 'org-roam-dailies)
     (thread-last backlink
                  (org-roam-backlink-source-node)
                  (org-roam-node-file)
@@ -1340,19 +1587,18 @@ org ref seems better than citar! bc
       ;;     (t             . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*}"))
       bibtex-completion-notes-path nil
       )
-(use-package! org-ref
-  :defer-incrementally org-roam)
-
-;; org roam bibtex stuff
-(use-package! org-roam-bibtex
-  :after org-roam)
-(after! org-roam-bibtex
-  (require 'org-ref)
-  (setq orb-roam-ref-format 'org-ref-v3))
-(add-hook! org-mode
-  ;; could maybe restrict this to org-roam-dir but whatever
-  (org-roam-bibtex-mode 1)
-  (setq-local company-minimum-prefix-length 0))
+;; (use-package! org-ref
+;;   :defer-incrementally org-roam)
+;; ;; org roam bibtex stuff
+;; (use-package! org-roam-bibtex
+;;   :after org-roam)
+;; (after! org-roam-bibtex
+;;   (require 'org-ref)
+;;   (setq orb-roam-ref-format 'org-ref-v3))
+;; (add-hook! org-mode
+;;   ;; could maybe restrict this to org-roam-dir but whatever
+;;   (org-roam-bibtex-mode 1)
+;;   (setq-local company-minimum-prefix-length 0))
 
 
 ;; I think citar can get better than org ref at some point but just not today
@@ -1476,38 +1722,39 @@ org ref seems better than citar! bc
 #+begin_src elisp
 ;; lsp uses typescript-language-server
 ;; with npm i -g typescript-language-server
-(add-hook! typescript-mode :append
-  (lsp)
-  (lsp-mode 1)
-  (setq typescript-indent-level 2))
+
+;; auto set up by doom
+;; (add-hook! typescript-mode
+;;   (lsp)
+;;   (lsp-mode 1)
+
+;;   (setq typescript-indent-level 2))
+
 #+end_src
 
 #+RESULTS:
 
 update: should really just use emacs' lsp-mode for this
 
+i think this should be handled so commented, hook adding issues maybe
 #+begin_src elisp
-(add-hook! js2-mode
-           (lsp)
-           (lsp-mode 1))
+;; (add-hook! js2-mode
+;;            (lsp)
+;;            (lsp-mode 1))
 
-(map! :mode js2-mode
-      :localleader
-      (:prefix ("g" . "goto...")
-      "g" 'js2-jump-to-definition
-      "b" #'pop-tag-mark))
+;; (map! :mode js2-mode
+;;       :localleader
+;;       (:prefix ("g" . "goto...")
+;;       "g" 'js2-jump-to-definition
+;;       "b" #'pop-tag-mark))
 
+;; for skewer, like a repl type thing for js
+;; (map! :mode skewer
+;;       (:prefix (",e" . "skewer eval")
+;;        "d" 'skewer-eval-defun))
 #+end_src
 
-for skewer, like a repl type thing for js
 
-#+begin_src elisp
-
-(map! :mode skewer
-      (:prefix (",e" . "skewer eval")
-       "d" 'skewer-eval-defun))
-
-#+end_src
 
 #+RESULTS:
 
