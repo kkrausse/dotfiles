@@ -30,7 +30,7 @@
                            ;; I guess this at least puts it on clojure-lsp's radar
                            ;; zkev.local/clojure-src {:local/root "/Users/kevinkrausse/Documents/repos"}
 
-                           kev.dev/clj-utils                        {:local/root "/Users/kevinkrausse/Documents/taxbit/clj-utils"}
+                           ;; kev.dev/clj-utils                        {:local/root "/Users/kevinkrausse/Documents/taxbit/clj-utils"}
                            ;;;;;;;;;;;;;; end local stuff ;;;;;;;;;;;;;;;;;;;;;;;
                            org.clojure/core.async                   {:git/url "https://github.com/clojure/core.async"
                                                                      :sha     "ad5c0475346a0ef36e6a8623cc1d3c1b6439ef96"}
@@ -54,17 +54,15 @@
                            ;;org.clojure/tools.deps.alpha {:mvn/version "0.12.1030"}
                            vlaaad/reveal                            {:mvn/version "1.3.276"}
                            cljfx/cljfx                              {:git/url "https://github.com/cljfx/cljfx" :sha "ddea0fe5e3eca5e8b53f435c43db407b10e37480"}
-                           nrepl/nrepl                              {:mvn/version "1.1.0-alpha1"}
-                           cider/cider-nrepl                        {:mvn/version "0.41.0"}
-                           com.cognitect.aws/api               {:git/url "https://github.com/cognitect-labs/aws-api"
-                                                                :sha "78ffd72aa5e721510058bddb9d1663425b7cb612"}
+                           nrepl/nrepl                              {:mvn/version "1.3.1"}
+                           cider/cider-nrepl                        {:mvn/version "0.57.0"}
+                           ;; com.cognitect.aws/api               {:git/url "https://github.com/cognitect-labs/aws-api"
+                           ;;                                      :sha "78ffd72aa5e721510058bddb9d1663425b7cb612"}
                            }
-              :jvm-opts   ["-Xmx11g" "-Xss300m" "-XX:-OmitStackTraceInFastThrow"
-                           ;; testing keystore
-                           ;; "-Djavax.net.ssl.keyStore=/Users/kkrausse/Documents/ekata/services/network-signals/docker/certs/redislabs_user.p12"
-                           ;; "-Djavax.net.ssl.keyStoreType=PKCS12"
-                           ;; "-Djavax.net.ssl.keyStorePassword=bimjean"
-                           ;; "-Djavax.net.debug=ssl"
+              :jvm-opts   [
+                          "-Xmx11g"
+                           "-XX:-OmitStackTraceInFastThrow"
+                           ;; "-XX:+UseShenandoahGC"
                            ;; these three are for jvm profiling
                            "-Djdk.attach.allowAttachSelf"
                            "-XX:+UnlockDiagnosticVMOptions"

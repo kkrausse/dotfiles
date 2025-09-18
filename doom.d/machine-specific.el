@@ -5,7 +5,8 @@
 
 
 (setq kev/py-shell-interpreter "/Users/kevinkrausse/miniconda/envs/base2/bin/python")
-(setq org-roam-directory "~/Documents/repos/worknotes/org-roam")
+(setq org-roam-directory "/Users/kevinkrausse/Documents/repos/worknotes/org-roam")
+(setq org-roam-db-location "/Users/kevinkrausse/.config/emacs/.local/cache/org-roam.db")
 (setq org-roam-dailies-directory "taxbit-daily/")
 
 ;; idk what this is, came with doom

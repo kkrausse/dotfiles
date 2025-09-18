@@ -81,4 +81,10 @@ export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
 
 source $HOME/miniconda/bin/activate
 conda activate base2
+source $HOME/Documents/taxbit/tax-engine-tools/bash_scripts/source.sh
 
+. "$HOME/.local/bin/env"
+
+
+# for gemini code
+export GOOGLE_CLOUD_PROJECT="1026764388373"
