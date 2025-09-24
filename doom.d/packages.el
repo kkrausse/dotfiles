@@ -34,6 +34,9 @@
 (package! key-chord)
 (package! evil-escape)
 
+;; logging
+(package! command-log-mode)
+
 ;; make it so terminal colors arent shit
 (package! solaire-mode :disable t)
 
@@ -119,6 +122,8 @@
   :recipe (:type git
            :host nil
            :repo "https://github.com/emacs-citar/citar-org-roam.git"))
+
+(package! csv-mode)
 
 ;; You can override the recipe of a built in package without having to specify
 ;; all the properties for `:recipe'. These will inherit the rest of its recipe
