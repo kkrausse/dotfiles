@@ -1682,31 +1682,6 @@ org ref seems better than citar! bc
 
 #+end_src
 
-#+RESULTS:
-
-update: should really just use emacs' lsp-mode for this
-
-i think this should be handled so commented, hook adding issues maybe
-#+begin_src elisp
-;; (add-hook! js2-mode
-;;            (lsp)
-;;            (lsp-mode 1))
-
-;; (map! :mode js2-mode
-;;       :localleader
-;;       (:prefix ("g" . "goto...")
-;;       "g" 'js2-jump-to-definition
-;;       "b" #'pop-tag-mark))
-
-;; for skewer, like a repl type thing for js
-;; (map! :mode skewer
-;;       (:prefix (",e" . "skewer eval")
-;;        "d" 'skewer-eval-defun))
-#+end_src
-
-
-
-#+RESULTS:
 
 ** python
 #+begin_src elisp
@@ -2003,7 +1978,6 @@ cider configs
                                    ))
 
 
-(put 'cider-custom-cljs-repl-init-form 'safe-local-variable 'identity)
 (use-package! cider
   ;; for some reason, this works. But after! doesn't work.
   ;; neither does `:hook (clojure-mode . cider-mode)`. Both cause the doom module
