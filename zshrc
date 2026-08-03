@@ -75,17 +75,39 @@ run_if_command_exists python3 \
 
 # uh need to fix this grbg to not be checked in
 export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+# --no-use: the implicit `nvm use default` spawns ~100 subprocesses, which takes
+# ~30s under SentinelOne's per-exec scanning; resolve the default version below
+# with globs instead (no subprocesses)
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" --no-use
+if [ -s "$NVM_DIR/alias/default" ]; then
+  read -r _nvm_default < "$NVM_DIR/alias/default"
+  _nvm_bins=("$NVM_DIR"/versions/node/v${_nvm_default#v}*/bin(Nn))
+  [ ${#_nvm_bins} -gt 0 ] && export PATH="${_nvm_bins[-1]}:$PATH"
+  unset _nvm_default _nvm_bins
+fi
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 export PATH="/usr/local/opt/libpq/bin:$PATH"
 export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
 
 source $HOME/miniconda/bin/activate
 conda activate base2
-source $HOME/Documents/taxbit/tax-engine-tools/bash_scripts/source.sh
+alias forward-aws-all='bun run $HOME/Documents/taxbit/kevin-scripts/forward-all.ts'
+forward-aws-host() {
+    local profile=$1 local_port=$2 host=$3 remote_port=$4 bastion=${5:-ssh-bastion}
+    ec2-session --profile "$profile" \
+        --document-name AWS-StartPortForwardingSessionToRemoteHost \
+        --parameters "{\"portNumber\":[\"$remote_port\"],\"localPortNumber\":[\"$local_port\"],\"host\":[\"$host\"]}" \
+        "$bastion"
+}
 
 . "$HOME/.local/bin/env"
 
 
 # for gemini code
 export GOOGLE_CLOUD_PROJECT="1026764388373"
+
+ulimit -n 65536 65536
+
+# Secrets and per-machine overrides live here, outside this repo — the repo is
+# public, so nothing sensitive belongs in it.
+[ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"
