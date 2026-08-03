@@ -574,6 +574,14 @@ in `input' to get back edits made by the model"
 #+end_src
 ** utility functions
 #+begin_src elisp
+(defun file-notify-rm-all-watches ()
+  "Remove all existing file notification watches from Emacs."
+  (interactive)
+  (maphash
+   (lambda (key _value)
+     (file-notify-rm-watch key))
+   file-notify-descriptors))
+
 (defmacro kev-setq-local (&rest kvs)
   `(progn
      ,@(mapcar
@@ -1997,11 +2005,13 @@ nice keybindings
                (lsp-format-buffer)
                (clojure-align (point-min) (point-max))))
 
-           (define-clojure-indent
-             (into 1)
-             (do-template nil)
-             (sc.api/letsc 1)
-             (macrolet '(1 ((:defn)) nil)))
+           ;; use put-clojure-indent (a function) instead of define-clojure-indent:
+           ;; the macro's args get eager-macroexpanded before clojure-mode loads,
+           ;; and `macrolet' collides with elisp's cl-macrolet alias
+           (put-clojure-indent 'into 1)
+           (put-clojure-indent 'do-template nil)
+           (put-clojure-indent 'sc.api/letsc 1)
+           (put-clojure-indent 'macrolet '(1 ((:defn)) nil))
            )
 
 (define-advice aggressive-indent--indent-if-changed (:around (orig-fun buffer) aggressive-indent-advice)
@@ -2049,7 +2059,7 @@ nice keybindings
                                              ")")
                                      nil
                                      (cider-defun-at-point 'bounds)
-                                     (cider--nrepl-pr-request-map)))
+                                     (cider--nrepl-pr-request-plist)))
       "en" #'cider-eval-ns-form
       "="  #'kev-format-form
       "ip" #'(lambda () (interactive) (insert "clojure.pprint/pprint")))
@@ -2178,12 +2188,15 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
            ;; I don't think these are required?
            ;; (evil-set-command-property 'evil-ex-search-next :jump nil)
            ;; (evil-set-command-property 'evil-ex-search-backward :jump nil)
-           (map! :map lsp-command-map
-                 ;; TODO maybe prefix will fix lack of docs
-                 "gb" #'xref-go-back
-                 "gf" #'xref-go-forward
-                 "d" #'lsp-ui-doc-glance)
-           (map! "s-l" lsp-command-map)
+
+           ;; changed these to be in the after portion and seemed to fix gb not being mapped
+           ;;
+           ;; (map! :map lsp-command-map
+           ;;       ;; TODO maybe prefix will fix lack of docs
+           ;;       "gb" #'xref-go-back
+           ;;       "gf" #'xref-go-forward
+           ;;       "d" #'lsp-ui-doc-glance)
+           ;; (map! :nv "SPC l" lsp-command-map)
 
            (lsp-diagnostics-mode 0)
 
@@ -2243,6 +2256,15 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
 (after! lsp-mode
   (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]public\\'" "")
   (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]\\tmp\\'")
+  ;; idk chat says this second one too
+  (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]tmp\\'")
+
+           (map! :map lsp-command-map
+                 ;; TODO maybe prefix will fix lack of docs
+                 "gb" #'xref-go-back
+                 "gf" #'xref-go-forward
+                 "d" #'lsp-ui-doc-glance)
+           (map! :nv "SPC l" lsp-command-map)
   )
 
 

@@ -4,9 +4,7 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(safe-local-variable-values
-   '((cider-jack-in-cmd . "clojure -M:test:local-dev")
-     (kev/py-shell-dir . ".")
-     (cider-default-cljs-repl . custom)
+   '((kev/py-shell-dir . ".") (cider-default-cljs-repl . custom)
      (cider-jack-in-cmd . "clojure -M:dev:test:local-dev"))))
 (put 'customize-variable 'disabled nil)
 (put 'customize-group 'disabled nil)
