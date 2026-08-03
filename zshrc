@@ -91,23 +91,12 @@ export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
 
 source $HOME/miniconda/bin/activate
 conda activate base2
-alias forward-aws-all='bun run $HOME/Documents/taxbit/kevin-scripts/forward-all.ts'
-forward-aws-host() {
-    local profile=$1 local_port=$2 host=$3 remote_port=$4 bastion=${5:-ssh-bastion}
-    ec2-session --profile "$profile" \
-        --document-name AWS-StartPortForwardingSessionToRemoteHost \
-        --parameters "{\"portNumber\":[\"$remote_port\"],\"localPortNumber\":[\"$local_port\"],\"host\":[\"$host\"]}" \
-        "$bastion"
-}
 
 . "$HOME/.local/bin/env"
 
-
-# for gemini code
-export GOOGLE_CLOUD_PROJECT="1026764388373"
-
 ulimit -n 65536 65536
 
-# Secrets and per-machine overrides live here, outside this repo — the repo is
-# public, so nothing sensitive belongs in it.
-[ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"
+# This file is the shared, checked-in half of the config. ~/.zshrc is a real
+# file per machine that sources this one and then adds whatever is local to that
+# machine -- work paths, credentials, host-specific overrides. Nothing secret
+# belongs in here, since this repo is public. See readme.org.
