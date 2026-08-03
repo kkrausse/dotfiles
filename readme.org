@@ -167,4 +167,7 @@ ln -s $(pwd)/clj-kondo ~/.clj-kondo
 ln -s $(pwd)/clojure ~/.clojure
 # idk if even needed
 ln -s $(pwd)/bin ~/.bin
+
+ln -s $(pwd)/ghostty_config ~/.config/ghostty/config
+ln -s $(pwd)/tmux.conf ~/.tmux.conf
 #+end_src
