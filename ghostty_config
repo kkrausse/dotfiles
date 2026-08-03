@@ -1,4 +1,10 @@
 cursor-style = block
-window-decoration = none
-theme = tokyonight
+# window-decoration = none
+theme = Monokai Remastered
+# Remastered ships red and magenta as the same hex (#f4005f), and every bright
+# slot duplicates its normal one. These restore magenta as a distinct color.
+# Values chosen for separation under deuteranopia/protanopia simulation.
+palette = 5=#ff6ac1
+palette = 13=#ff9ad4
 font-family = TX-02
+keybind = super+v=paste_from_clipboard
