@@ -1511,12 +1511,13 @@ org-roam setup and shortcuts
 
 so subnodes uses subnode ids, but I wanna use like "parents" or something
 
+This is a one-shot migration, so it is a function to call by hand -- e.g.
+=(kev-roam-name-subnodes "~/org-roam/some-file.org")=. It rewrites and saves the
+file it is given, so do not run it from a hook.
+
 #+begin_src elisp
 ;; oh golly
 (require 'org-roam-node)
-
-(setq testo-file "/Users/kevinkrausse/Documents/repos/worknotes/org-roam/20221129110708-taxbit.org")
-
 
 (defun kev-roam-id->link (id)
   (concat "[[id:"
@@ -1547,48 +1548,6 @@ so subnodes uses subnode ids, but I wanna use like "parents" or something
                             (seq-map #'kev-roam-id->link))
                           (string-join " ")
                           ))))
-       )
-     nil 'file)
-    (save-buffer)
-    ))
-
-(let ((f testo-file))
-  (with-current-buffer (find-file-noselect f)
-    (org-mode)
-    (goto-char (point-min))
-
-    (org-map-entries
-     (lambda ()
-       (let ((subnodes (thread-last (org-entry-properties)
-                                    (assoc "SUBNODE_OF")
-                                    (cdr))))
-         (when subnodes
-           (org-set-property
-            "PARENTS"
-            (thread-first subnodes
-                          (string-trim)
-                          (split-string " ")
-                          (thread-last
-                            (seq-filter '(lambda (s)
-                                           (not
-                                            (string= s ""))))
-                            (seq-map #'kev-roam-id->link))
-                          (string-join " ")
-                          ))
-           ;; (print (list
-           ;;         (substring-no-properties (org-get-heading t t t t))
-           ;;         (thread-first subnodes
-           ;;                      (string-trim)
-           ;;                      (split-string " ")
-           ;;                      (thread-last
-           ;;                        (seq-filter '(lambda (s)
-           ;;                                       (not
-           ;;                                        (string= s ""))))
-           ;;                        (seq-map #'kev-roam-id->link))
-           ;;                      (string-join " ")
-           ;;                      )
-           ;;         ))
-           ))
        )
      nil 'file)
     (save-buffer)
