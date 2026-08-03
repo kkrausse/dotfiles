@@ -8,8 +8,8 @@
 
 ;; Runs a real shell inside an Emacs WebKit xwidget buffer, rendered by
 ;; ghostty-web (Ghostty's VT parser compiled to WASM).  A small Node server
-;; provides the PTY over a loopback WebSocket; this file starts that server on
-;; demand and points an xwidget at it.
+;; provides the PTY over a loopback WebSocket; this file starts one such server
+;; per terminal buffer and points that buffer's xwidget at it.
 ;;
 ;; Usage:
 ;;
@@ -60,9 +60,9 @@
 ;; rejects with NotAllowedError, and `document.execCommand("paste")' only
 ;; "succeeds" by making WebKit show a native Paste bubble that has to be clicked
 ;; for every paste.  Emacs can read the clipboard for free, so Cmd-V in the page is
-;; turned into a paste *request*: the page sends it over the PTY WebSocket, the
-;; server prints it on stdout, the Emacs process filter picks it up and answers with
-;; the clipboard as it is right then (`ghostty-web-term--serve-paste-request').
+;; turned into a paste *request*: the page sends it over the control channel Emacs
+;; hosts (or, if that socket is down, over the PTY WebSocket to be relayed on the
+;; server's stdout), and Emacs answers with the clipboard as it is right then.
 ;; Nothing is cached on the page, deliberately -- a dictation or clipboard-manager
 ;; tool that copies and immediately presses Cmd-V would outrun any cache.  Whether
 ;; to wrap a paste in bracketed-paste markers is decided in the page, the only side
@@ -142,51 +142,105 @@ On the normal screen the wheel always scrolls the scrollback instead."
   "Seconds to wait for the PTY server to report readiness."
   :type 'number)
 
-(defvar ghostty-web-term--process nil
-  "The running PTY server process, or nil.")
+;;; Server lifecycle
+;;
+;; One server process per terminal buffer.
+;;
+;; A singleton would work -- the Node side spawns a PTY per WebSocket connection,
+;; so a single process genuinely serves N terminals -- but only for as long as its
+;; lifetime is tracked by hand.  Nothing owned that process, so it had to be
+;; reference-counted against the set of live terminal buffers, and that bookkeeping
+;; is exactly the kind that rots: the hook meant to stop the server when the last
+;; terminal died could not apply to terminals that were already open, because the
+;; mode body had already run in them.  Tying the process to the buffer makes
+;; lifetime correct by construction instead: `kill-buffer' takes the server with
+;; it, and there is no shared state left to get out of step.
+;;
+;; The cost is a node process (~40-60MB) and a startup handshake (~1s) per
+;; terminal, where a warm shared server opened them instantly.  That is a fine
+;; trade at the handful of terminals anyone keeps open, and it buys back the
+;; blast radius too: restarting or losing one server no longer touches the others.
 
-(defvar ghostty-web-term--info nil
-  "Plist describing the running server: :url, :port, :token.")
+(defvar-local ghostty-web-term--client-id nil
+  "Identifier this buffer's page uses when talking to Emacs.
+Also names this buffer's server process and its log buffer.")
 
-(defvar ghostty-web-term--stdout ""
-  "Accumulated server stdout, scanned for the readiness handshake.")
+(defvar ghostty-web-term--client-counter 0
+  "Counter handing out `ghostty-web-term--client-id' values.")
+
+(defun ghostty-web-term--next-client-id ()
+  "Return a fresh client id."
+  (number-to-string (cl-incf ghostty-web-term--client-counter)))
+
+(cl-defstruct (ghostty-web-term--server
+               (:constructor ghostty-web-term--server-make)
+               (:copier nil))
+  "One terminal's PTY server."
+  ;; The node process.
+  process
+  ;; Plist of :url, :port and :token, filled in from the readiness handshake.
+  info
+  ;; Trailing partial line of stdout, held until the rest of it arrives.
+  (stdout ""))
+
+(defvar-local ghostty-web-term--server nil
+  "This buffer's `ghostty-web-term--server', or nil.")
 
 (defconst ghostty-web-term--ready-prefix "GHOSTTY_WEB_READY "
   "Prefix of the handshake line the server prints once listening.")
 
-;;; Server lifecycle
-
-(defun ghostty-web-term--server-live-p ()
-  "Return non-nil when the PTY server process is running."
-  (and ghostty-web-term--process
-       (process-live-p ghostty-web-term--process)))
-
 (defconst ghostty-web-term--paste-prefix "GHOSTTY_WEB_PASTE_REQUEST "
   "Prefix of the line the server prints when a page asks Emacs to paste.")
 
+(defun ghostty-web-term--server-live-p (&optional server)
+  "Return non-nil when SERVER, or this buffer's server, is running."
+  (let ((server (or server ghostty-web-term--server)))
+    (and (ghostty-web-term--server-p server)
+         (process-live-p (ghostty-web-term--server-process server)))))
+
+(defun ghostty-web-term--info ()
+  "Return this buffer's server info plist (:url, :port, :token), or nil."
+  (and (ghostty-web-term--server-p ghostty-web-term--server)
+       (ghostty-web-term--server-info ghostty-web-term--server)))
+
+(defun ghostty-web-term--log-buffer-name (client)
+  "Return the name of the log buffer for the server serving CLIENT.
+One log buffer per server: several node processes writing into a single
+buffer interleave into something not worth reading."
+  (format "*ghostty-web-server-%s*" client))
+
 (defun ghostty-web-term--filter (proc string)
-  "Handle STRING from the server PROC one complete line at a time.
-Also echoes into the process buffer, so `*ghostty-web-server*' actually
-shows the server's diagnostics -- setting a filter otherwise suppresses
-them, which made the \"see *ghostty-web-server*\" advice useless."
+  "Handle STRING from server PROC one complete line at a time.
+Also echoes into the process buffer, so the server's log buffer actually
+shows its diagnostics -- setting a filter otherwise suppresses them, which
+made the \"see the server buffer\" advice useless."
   (let ((buf (process-buffer proc)))
     (when (buffer-live-p buf)
       (with-current-buffer buf
         (let ((inhibit-read-only t))
           (save-excursion (goto-char (point-max)) (insert string))))))
-  (setq ghostty-web-term--stdout (concat ghostty-web-term--stdout string))
-  ;; Consume whole lines and keep only a partial tail, so the accumulator cannot
-  ;; grow without bound and a line is never acted on twice.
-  (while (string-match "\\`\\([^\n]*\\)\n" ghostty-web-term--stdout)
-    (let ((line (match-string 1 ghostty-web-term--stdout)))
-      (setq ghostty-web-term--stdout
-            (substring ghostty-web-term--stdout (match-end 0)))
-      (ghostty-web-term--handle-line line))))
+  ;; The state lives on the process, not in a global and not in whatever buffer
+  ;; happens to be current: output arrives long after the call that started this
+  ;; server returned.
+  (let ((server (process-get proc 'gw-server)))
+    (when (ghostty-web-term--server-p server)
+      ;; Split the whole chunk before acting on any of it.  Only a partial tail is
+      ;; kept, so the accumulator cannot grow without bound, and the accumulator is
+      ;; never left mid-update while `--handle-line' runs arbitrary code (it can
+      ;; answer a paste request), which is how a line would get handled twice.
+      (let ((acc (concat (ghostty-web-term--server-stdout server) string))
+            (lines nil))
+        (while (string-match "\\`\\([^\n]*\\)\n" acc)
+          (push (match-string 1 acc) lines)
+          (setq acc (substring acc (match-end 0))))
+        (setf (ghostty-web-term--server-stdout server) acc)
+        (dolist (line (nreverse lines))
+          (ghostty-web-term--handle-line proc server line))))))
 
-(defun ghostty-web-term--handle-line (line)
-  "Act on one complete output LINE from the server."
+(defun ghostty-web-term--handle-line (proc server line)
+  "Act on one complete output LINE from SERVER, whose process is PROC."
   (cond
-   ((and (not ghostty-web-term--info)
+   ((and (not (ghostty-web-term--server-info server))
          (string-prefix-p ghostty-web-term--ready-prefix line))
     (let* ((payload (substring line (length ghostty-web-term--ready-prefix)))
            (parsed (condition-case err
@@ -195,16 +249,19 @@ them, which made the \"see *ghostty-web-server*\" advice useless."
                       (message "ghostty-web-term: bad handshake: %S" err)
                       nil))))
       (when parsed
-        (setq ghostty-web-term--info
+        (setf (ghostty-web-term--server-info server)
               (list :url (plist-get parsed :url)
                     :port (plist-get parsed :port)
                     :token (plist-get parsed :token))))))
    ((string-prefix-p ghostty-web-term--paste-prefix line)
+    ;; The page's fallback paste path, for when its control socket is down.  This
+    ;; server serves exactly one terminal, so the process knows which buffer
+    ;; asked and the client id in the payload is only a cross-check.
     (let* ((payload (substring line (length ghostty-web-term--paste-prefix)))
            (parsed (ignore-errors
                      (json-parse-string payload :object-type 'plist)))
            (client (and parsed (plist-get parsed :client))))
-      (ghostty-web-term--serve-paste-request client)))))
+      (ghostty-web-term--serve-paste-request client (process-get proc 'gw-buffer))))))
 
 (defun ghostty-web-term--check-installed ()
   "Signal a user error unless the server and its dependencies are present."
@@ -221,72 +278,402 @@ them, which made the \"see *ghostty-web-server*\" advice useless."
     (user-error "ghostty-web-term: %s not found in exec-path"
                 ghostty-web-term-node-program)))
 
-(defun ghostty-web-term-start-server ()
-  "Start the PTY server unless it is already running.  Return its info plist."
-  (interactive)
-  (if (ghostty-web-term--server-live-p)
-      ghostty-web-term--info
-    (ghostty-web-term--check-installed)
-    (setq ghostty-web-term--stdout ""
-          ghostty-web-term--info nil)
-    (let* ((default-directory ghostty-web-term-directory)
-           (args (append
-                  (list "server.js" "--port" (number-to-string ghostty-web-term-port))
-                  (when ghostty-web-term-command
-                    (list "--cmd" ghostty-web-term-command))
-                  (when ghostty-web-term-directory-for-shell
-                    (list "--cwd" (expand-file-name
-                                   ghostty-web-term-directory-for-shell))))))
-      (setq ghostty-web-term--process
-            (make-process
-             :name "ghostty-web-server"
-             :buffer (get-buffer-create "*ghostty-web-server*")
-             :command (cons ghostty-web-term-node-program args)
-             :connection-type 'pipe
-             :noquery t
-             :filter #'ghostty-web-term--filter
-             :sentinel #'ghostty-web-term--sentinel)))
+(defun ghostty-web-term--server-start (client)
+  "Start a PTY server for CLIENT and return its `ghostty-web-term--server'.
+Blocks until the server reports readiness, so the caller gets a URL that is
+actually loadable, and signals -- taking the process with it rather than
+leaving an orphan node behind -- if readiness never comes."
+  (ghostty-web-term--check-installed)
+  (let* ((default-directory ghostty-web-term-directory)
+         (log (ghostty-web-term--log-buffer-name client))
+         (server (ghostty-web-term--server-make))
+         (args (append
+                (list "server.js" "--port" (number-to-string ghostty-web-term-port))
+                (when ghostty-web-term-command
+                  (list "--cmd" ghostty-web-term-command))
+                (when ghostty-web-term-directory-for-shell
+                  (list "--cwd" (expand-file-name
+                                 ghostty-web-term-directory-for-shell)))))
+         (proc (make-process
+                :name (format "ghostty-web-server-%s" client)
+                ;; Deliberately not the terminal's own buffer: that is an xwidget
+                ;; buffer, and the server's diagnostics would be inserted into it.
+                :buffer (get-buffer-create log)
+                :command (cons ghostty-web-term-node-program args)
+                :connection-type 'pipe
+                :noquery t
+                :filter #'ghostty-web-term--filter
+                :sentinel #'ghostty-web-term--sentinel)))
+    (setf (ghostty-web-term--server-process server) proc)
+    (process-put proc 'gw-server server)
     ;; Block briefly for the handshake so callers get a usable URL.
     (let ((deadline (+ (float-time) ghostty-web-term-startup-timeout)))
-      (while (and (not ghostty-web-term--info)
-                  (ghostty-web-term--server-live-p)
+      (while (and (not (ghostty-web-term--server-info server))
+                  (process-live-p proc)
                   (< (float-time) deadline))
-        (accept-process-output ghostty-web-term--process 0.05)))
-    (unless ghostty-web-term--info
-      (let ((msg (if (ghostty-web-term--server-live-p)
+        (accept-process-output proc 0.05)))
+    (unless (ghostty-web-term--server-info server)
+      (let ((msg (if (process-live-p proc)
                      "timed out waiting for server handshake"
                    "server exited during startup")))
-        (user-error "ghostty-web-term: %s (see *ghostty-web-server*)" msg)))
-    ghostty-web-term--info))
+        (ghostty-web-term--server-kill server)
+        (user-error "ghostty-web-term: %s (see %s)" msg log)))
+    server))
 
-(defun ghostty-web-term--sentinel (_proc event)
-  "Clear cached server info when the process ends.  EVENT is the status change."
+(defun ghostty-web-term--server-kill (server)
+  "Delete SERVER's process, killing the shell it hosts.  Harmless if already dead."
+  (when (ghostty-web-term--server-p server)
+    (let ((proc (ghostty-web-term--server-process server)))
+      (when (process-live-p proc)
+        ;; Marked so the sentinel does not report a deliberate stop as a crash.
+        (process-put proc 'gw-stopping t)
+        (delete-process proc)))
+    (setf (ghostty-web-term--server-info server) nil)))
+
+(defun ghostty-web-term--server-adopt (server buffer)
+  "Make SERVER BUFFER's server, and BUFFER the terminal SERVER serves."
+  (process-put (ghostty-web-term--server-process server) 'gw-buffer buffer)
+  (with-current-buffer buffer
+    (setq ghostty-web-term--server server)))
+
+(defun ghostty-web-term--sentinel (proc event)
+  "Note that server PROC ended.  EVENT is the status change."
   (unless (string-match-p "\\`\\(run\\|open\\)" event)
-    (setq ghostty-web-term--info nil)))
+    (let ((server (process-get proc 'gw-server))
+          (buf (process-get proc 'gw-buffer)))
+      (when (ghostty-web-term--server-p server)
+        (setf (ghostty-web-term--server-info server) nil))
+      ;; A server dying by itself takes its shell with it and leaves the page
+      ;; retrying against a dead port, so say so.  Nothing to announce for a
+      ;; server we stopped on purpose, nor for one that never got as far as
+      ;; belonging to a buffer -- `--server-start' signals about that one itself,
+      ;; and this would only get in front of that message.
+      (when (and (not (process-get proc 'gw-stopping))
+                 (buffer-live-p buf))
+        (message "ghostty-web-term: server for %s exited (%s)"
+                 (buffer-name buf) (string-trim event))))))
+
+(defun ghostty-web-term--assert-terminal ()
+  "Signal unless the current buffer is a ghostty-web terminal."
+  (unless (memq (current-buffer) (ghostty-web-term--buffers))
+    (user-error "ghostty-web-term: %s is not a ghostty-web terminal"
+                (buffer-name))))
+
+(defun ghostty-web-term--start-and-load ()
+  "Give the current terminal a fresh server and point its page at it.
+Return the new server's info plist.
+
+Loading the page is not optional: the server's port and token are carried in
+the URL, so a new server is only reachable through a new URL.  Which is also
+why this makes no attempt to keep the shell -- that shell died with the
+server it was running under."
+  (let ((xw (or (ghostty-web-term--buffer-xwidget (current-buffer))
+                (user-error "ghostty-web-term: no xwidget in %s" (buffer-name))))
+        (client (or ghostty-web-term--client-id
+                    (setq ghostty-web-term--client-id
+                          (ghostty-web-term--next-client-id)))))
+    (let ((server (ghostty-web-term--server-start client)))
+      (ghostty-web-term--server-adopt server (current-buffer))
+      (xwidget-webkit-goto-uri xw (ghostty-web-term--url client server))
+      (ghostty-web-term--server-info server))))
+
+(defun ghostty-web-term-start-server ()
+  "Start this terminal's PTY server unless it is already running.
+Return its info plist.
+
+Worth running only after a server has died, and it costs that terminal's
+shell: see `ghostty-web-term-restart-server'.  Other terminals are not
+touched -- each one has its own server."
+  (interactive)
+  (ghostty-web-term--assert-terminal)
+  (if (ghostty-web-term--server-live-p)
+      (let ((info (ghostty-web-term--info)))
+        (message "ghostty-web-term: server for %s already running on port %s"
+                 (buffer-name) (plist-get info :port))
+        info)
+    (let ((info (ghostty-web-term--start-and-load)))
+      (message "ghostty-web-term: server for %s started on port %s"
+               (buffer-name) (plist-get info :port))
+      info)))
 
 (defun ghostty-web-term-stop-server ()
-  "Stop the PTY server, killing every shell it is hosting."
+  "Stop this terminal's PTY server, killing its shell.
+Other terminals keep running: each has a server of its own."
   (interactive)
-  (when (ghostty-web-term--server-live-p)
-    (delete-process ghostty-web-term--process))
-  (setq ghostty-web-term--process nil
-        ghostty-web-term--info nil)
-  (message "ghostty-web-term: server stopped"))
+  (ghostty-web-term--assert-terminal)
+  (if (not (ghostty-web-term--server-live-p))
+      (message "ghostty-web-term: no server running for %s" (buffer-name))
+    (ghostty-web-term--server-kill ghostty-web-term--server)
+    (message "ghostty-web-term: server for %s stopped" (buffer-name))))
 
 (defun ghostty-web-term-restart-server ()
-  "Restart the PTY server."
+  "Restart this terminal's PTY server and reload its page.
+
+This kills the shell, unavoidably: the new server listens on a new port with
+a new token, so the page has to be navigated to a new URL, and navigating an
+xwidget destroys the PTY behind it anyway.  Point
+`ghostty-web-term-command' at a multiplexer for a session that survives it.
+
+Only this terminal is affected."
   (interactive)
-  (ghostty-web-term-stop-server)
-  (ghostty-web-term-start-server)
-  (message "ghostty-web-term: server restarted on port %s"
-           (plist-get ghostty-web-term--info :port)))
+  (ghostty-web-term--assert-terminal)
+  (when (y-or-n-p (format "Restart the server for %s (kills its shell)? "
+                          (buffer-name)))
+    (ghostty-web-term--server-kill ghostty-web-term--server)
+    (let ((info (ghostty-web-term--start-and-load)))
+      (message "ghostty-web-term: server for %s restarted on port %s"
+               (buffer-name) (plist-get info :port)))))
+
+;;; Keyboard ownership: the focus module
+;;
+;; Emacs cannot give an xwidget the keyboard.  Not "there is no command for it" --
+;; it is not expressible.  Checked against Emacs 30.2: `src/nsxwidget.h' exports
+;; 18 `nsxwidget_*' functions and none touch responders; the two
+;; `makeFirstResponder:' calls in `nsxwidget.m' both hand focus TO Emacs (isearch,
+;; and the "C-g" script-message branch); and `xwidget-perform-lispy-event' is
+;; entirely inside `#ifdef USE_GTK', which is why `xwidget-webkit-edit-mode' does
+;; nothing here.  The only thing that gives a WKWebView first responder is
+;; WKWebView's own `mouseDown:'.  Hence "Emacs has the keyboard -- click to type".
+;;
+;; module/gw-focus.m closes that gap with the one AppKit call the port never
+;; makes.  A dynamic module runs in Emacs's process on Emacs's main thread, so it
+;; can ask the window to make the XwWebView first responder directly.  No
+;; synthesized clicks, no Accessibility, no private API: it lands in exactly the
+;; state a real click lands in, and the page can still hand the keyboard back by
+;; posting "C-g" the way it always could.
+;;
+;; Everything here fails soft.  With no module -- not built, not loadable, not
+;; macOS -- the terminal behaves exactly as it did before: the page's textarea
+;; gets DOM focus and a click is still needed.
+
+;; Provided by module/gw-focus.dylib once loaded; every call site checks
+;; `fboundp' first, since the module is optional by design.
+(declare-function gw-focus-take "gw-focus" (&optional match))
+(declare-function gw-focus-release "gw-focus" ())
+(declare-function gw-focus-state "gw-focus" ())
+(declare-function gw-focus-count "gw-focus" ())
+
+(defcustom ghostty-web-term-focus-module
+  (expand-file-name
+   "module/gw-focus.dylib"
+   (file-name-directory (or load-file-name buffer-file-name default-directory)))
+  "Path to the compiled focus module, or nil to never use one.
+Built from `module/gw-focus.m' in this package."
+  :type '(choice (const :tag "Do not use a focus module" nil) file))
+
+(defcustom ghostty-web-term-focus-module-auto-build t
+  "Compile the focus module on demand when it is missing.
+The build is one `clang' invocation and takes well under a second.  A
+failure is reported once and never retried in this session."
+  :type 'boolean)
+
+(defcustom ghostty-web-term-focus-module-include-dir nil
+  "Directory holding `emacs-module.h', or nil to derive it from this Emacs."
+  :type '(choice (const :tag "Derive from `data-directory'" nil) directory))
+
+(defvar ghostty-web-term--focus-module-state nil
+  "Cached outcome of loading the focus module: nil untried, t loaded, `failed'.
+Kept so a failure is not retried -- and re-reported -- on every window
+switch once `ghostty-web-term-autofocus-mode' is on.")
+
+(defun ghostty-web-term--focus-module-include-dir ()
+  "Return the directory that should hold `emacs-module.h'.
+Derived from `data-directory', which lands on the install prefix for a
+Homebrew, /usr/local or self-built Emacs alike."
+  (or ghostty-web-term-focus-module-include-dir
+      (expand-file-name "include" (expand-file-name "../../../.." data-directory))))
+
+(defun ghostty-web-term-build-focus-module ()
+  "Compile the focus module from `module/gw-focus.m'.
+Signals with the compiler output when the build fails."
+  (interactive)
+  (unless ghostty-web-term-focus-module
+    (user-error "ghostty-web-term: `ghostty-web-term-focus-module' is nil"))
+  (let* ((dylib (expand-file-name ghostty-web-term-focus-module))
+         (source (expand-file-name "gw-focus.m" (file-name-directory dylib)))
+         (include (ghostty-web-term--focus-module-include-dir))
+         (header (expand-file-name "emacs-module.h" include))
+         (buf (get-buffer-create "*ghostty-web-focus-build*")))
+    (unless (file-exists-p source)
+      (user-error "ghostty-web-term: focus module source missing at %s" source))
+    (unless (file-exists-p header)
+      (user-error "ghostty-web-term: emacs-module.h not found in %s (set %s)"
+                  include "ghostty-web-term-focus-module-include-dir"))
+    (with-current-buffer buf
+      (let ((inhibit-read-only t)) (erase-buffer)))
+    (let ((status (apply #'call-process "clang" nil buf t
+                         (list "-bundle" "-fobjc-arc" "-O2" "-Wall"
+                               "-framework" "AppKit" "-framework" "WebKit"
+                               "-I" include "-o" dylib source))))
+      (unless (eq status 0)
+        (user-error "ghostty-web-term: focus module build failed (see %s)"
+                    (buffer-name buf)))
+      (message "ghostty-web-term: built %s" dylib)
+      dylib)))
+
+(defun ghostty-web-term--focus-module-ensure ()
+  "Make the focus module available if it can be.  Return non-nil on success.
+
+Never signals: this runs from a window hook, where an error would make
+switching windows fail rather than merely leave the keyboard behind."
+  (cond
+   ((featurep 'gw-focus) t)
+   ((eq ghostty-web-term--focus-module-state 'failed) nil)
+   ((null ghostty-web-term-focus-module) nil)
+   ;; `module-file-suffix' is the documented way to ask whether this Emacs can
+   ;; load modules at all -- nil when it cannot.  Not `(featurep
+   ;; \\='dynamic-modules)': that is absent from `features' in a plain Emacs even
+   ;; when module loading works perfectly, so gating on it disabled this feature
+   ;; entirely (measured -- it is present under Doom and missing under `emacs -Q',
+   ;; same binary).
+   ((not (and (eq window-system 'ns)
+              module-file-suffix
+              (fboundp 'module-load)))
+    (setq ghostty-web-term--focus-module-state 'failed)
+    nil)
+   (t
+    (let ((dylib (expand-file-name ghostty-web-term-focus-module)))
+      (condition-case err
+          (progn
+            (when (and (not (file-exists-p dylib))
+                       ghostty-web-term-focus-module-auto-build)
+              (ghostty-web-term-build-focus-module))
+            (if (not (file-exists-p dylib))
+                (progn
+                  (setq ghostty-web-term--focus-module-state 'failed)
+                  (message "ghostty-web-term: no focus module at %s (M-x %s)"
+                           dylib "ghostty-web-term-build-focus-module")
+                  nil)
+              (module-load dylib)
+              (setq ghostty-web-term--focus-module-state
+                    (if (featurep 'gw-focus) t 'failed))
+              (eq ghostty-web-term--focus-module-state t)))
+        (error
+         (setq ghostty-web-term--focus-module-state 'failed)
+         (message "ghostty-web-term: focus module unavailable: %s"
+                  (error-message-string err))
+         nil))))))
+
+(defun ghostty-web-term--client-url-match (&optional buffer)
+  "Return a URL fragment identifying BUFFER's page, or nil.
+The trailing \"&\" matters: without it \"client=1\" also matches client 10.
+`ghostty-web-term--url' always puts another parameter after the client id, so
+the separator is always there."
+  (let ((client (buffer-local-value 'ghostty-web-term--client-id
+                                    (or buffer (current-buffer)))))
+    (and client (format "client=%s&" client))))
+
+(defun ghostty-web-term--take-keyboard (&optional buffer)
+  "Give BUFFER's terminal the keyboard for real.  Return non-nil on success.
+Does nothing without the focus module, which is the difference between
+selecting the terminal's window and being able to type in it."
+  (and (ghostty-web-term--focus-module-ensure)
+       (fboundp 'gw-focus-take)
+       (let ((match (ghostty-web-term--client-url-match buffer)))
+         ;; With no client id, fall back to the module's own single-web-view
+         ;; rule rather than grabbing the keyboard for some other page.
+         (and (gw-focus-take match) t))))
+
+(defun ghostty-web-term-release-keyboard ()
+  "Hand the keyboard back to Emacs from Emacs's side.
+`ghostty-web-term-blur' is the usual way and works by asking the page to post
+\"C-g\"; this is for when the page cannot, having never had the keyboard or
+having stopped responding."
+  (interactive)
+  (if (and (ghostty-web-term--focus-module-ensure) (fboundp 'gw-focus-release)
+           (gw-focus-release))
+      (message "ghostty-web-term: Emacs has the keyboard")
+    (message "ghostty-web-term: could not move the keyboard (no focus module)")))
+
+(defun ghostty-web-term-focus-state ()
+  "Report which view currently owns the keyboard.
+Useful when typing goes somewhere unexpected: it names the window's first
+responder, which is the half of focus that no Lisp can see."
+  (interactive)
+  (if (and (ghostty-web-term--focus-module-ensure) (fboundp 'gw-focus-state))
+      (message "ghostty-web-term: %s" (gw-focus-state))
+    (message "ghostty-web-term: no focus module; %s"
+             "cannot see first-responder state")))
+
+;;;; Following window selection
+
+(defun ghostty-web-term--autofocus-eligible-p ()
+  "Return the terminal buffer that should take the keyboard now, or nil."
+  (let ((buf (window-buffer (selected-window))))
+    (and (buffer-local-value 'ghostty-web-term-mode buf)
+         ;; Never steal the keyboard out from under a prompt: a minibuffer read
+         ;; is the one place where losing keys silently is worst.
+         (not (active-minibuffer-window))
+         (not executing-kbd-macro)
+         ;; No guard against a half-typed prefix sequence, deliberately.  There
+         ;; is nothing to guard: this only runs when the *selected window
+         ;; changed*, and a window changes selection as the result of a command
+         ;; that has already finished, so no key sequence can straddle it.  An
+         ;; earlier version tested `this-single-command-keys' and was worse than
+         ;; useless -- that still holds the finished command's own keys when the
+         ;; idle timer fires, so `C-x o' into the terminal looked like a pending
+         ;; prefix and the keyboard never followed at all.
+         (not (buffer-local-value 'isearch-mode buf))
+         buf)))
+
+(defun ghostty-web-term--autofocus-run (buffer)
+  "Give BUFFER the keyboard if it is still the selected window's buffer."
+  (when (and (buffer-live-p buffer)
+             (eq (window-buffer (selected-window)) buffer))
+    (with-current-buffer buffer
+      ;; The page half: make the helper textarea `document.activeElement'.  Both
+      ;; halves are required -- `xwHasFocus()' in nsxwidget.m checks the DOM side
+      ;; before handing the key event to WebKit.
+      (ignore-errors (ghostty-web-term--eval "window.gw && window.gw.focus()"))
+      (ghostty-web-term--take-keyboard buffer))))
+
+(defun ghostty-web-term--autofocus-on-selection-change (&optional _frame)
+  "Hand the keyboard to a terminal whose window has just been selected."
+  (let ((buf (ghostty-web-term--autofocus-eligible-p)))
+    (when buf
+      ;; Deferred: moving first responder inside the command that selected the
+      ;; window is asking for trouble, and the switch should have settled before
+      ;; the keyboard follows it.
+      (run-with-idle-timer 0 nil #'ghostty-web-term--autofocus-run buf))))
+
+;;;###autoload
+(define-minor-mode ghostty-web-term-autofocus-mode
+  "Give a ghostty-web terminal the keyboard whenever its window is selected.
+
+Without this, switching to the terminal's window leaves the keyboard with
+Emacs and the page says so (\"Emacs has the keyboard -- click to type\"),
+because only a mouse click can give a WKWebView first responder.  This mode
+does it programmatically instead, through the focus module.
+
+Understand the trade before enabling it.  Any command that selects the
+terminal's window now also takes the keyboard away from Emacs -- `other-window'
+into it, a jump, `winner-undo', some package calling `pop-to-buffer' -- and the
+only way back is a handoff chord (`ghostty-web-term-handoff-chords').  That is
+the point of the feature and also its whole hazard.  Prompts, keyboard macros
+and half-typed prefix sequences are excluded (see
+`ghostty-web-term--autofocus-eligible-p'), but ordinary window motion is not.
+
+Off by default, and inert if the focus module cannot be loaded."
+  :global t
+  :lighter nil
+  (if ghostty-web-term-autofocus-mode
+      (add-hook 'window-selection-change-functions
+                #'ghostty-web-term--autofocus-on-selection-change)
+    (remove-hook 'window-selection-change-functions
+                 #'ghostty-web-term--autofocus-on-selection-change)))
 
 ;;; Page control channel
 
 (defun ghostty-web-term--session ()
-  "Return the xwidget in the current buffer, or signal."
-  (or (xwidget-webkit-current-session)
-      (user-error "ghostty-web-term: no xwidget in this buffer")))
+  "Return the xwidget to drive: this buffer's own, else a terminal's.
+Deliberately not `xwidget-webkit-current-session', which falls back to the
+last session used anywhere and so returns non-nil in every buffer, quite
+possibly some unrelated widget.  The fallback here is narrower and is the
+point: `ghostty-web-term-send-region' and friends are meant to be called
+from the buffer you are editing, and should reach the terminal from there."
+  (or (ghostty-web-term--buffer-xwidget (current-buffer))
+      (seq-some #'ghostty-web-term--buffer-xwidget (ghostty-web-term--buffers))
+      (user-error "ghostty-web-term: no terminal to talk to")))
 
 (defun ghostty-web-term--eval (script &optional callback)
   "Run SCRIPT in the terminal page, optionally passing the result to CALLBACK."
@@ -303,6 +690,11 @@ even though the handoff worked.  Keeping selection on the terminal while it owns
 the keyboard preserves the invariant that handing off leaves you in the
 terminal's window.
 
+Whether this really hands over the keyboard depends on the focus module: with
+it, first responder moves too and typing goes to the shell immediately; without
+it, all Emacs can do is focus the page's textarea, and a click is still needed.
+See `ghostty-web-term--focus-module-ensure'.
+
 Afterwards Emacs bindings in this buffer will not fire until you press a handoff
 chord (`ghostty-web-term-handoff-chords')."
   (interactive)
@@ -310,13 +702,16 @@ chord (`ghostty-web-term-handoff-chords')."
     (when (and win (not (eq win (selected-window))))
       (select-window win)))
   (ghostty-web-term--eval "window.gw && window.gw.focus()")
-  ;; Deliberately does not claim the terminal now has the keyboard.  All this can
-  ;; do is focus the page's textarea, which is only half of it: if Emacs is the
-  ;; window's first responder the keystrokes still go to Emacs, and no Lisp can
-  ;; change that -- see the commentary at the top of this file.
-  (message
-   "ghostty-web-term: terminal focused; if keys still go to Emacs, click it (%s hands back)"
-   ghostty-web-term-handoff-chords))
+  (if (ghostty-web-term--take-keyboard)
+      (message "ghostty-web-term: terminal has the keyboard (%s hands it back)"
+               ghostty-web-term-handoff-chords)
+    ;; Without the module this cannot claim the terminal has the keyboard.  All
+    ;; it did was focus the page's textarea, which is half of the condition: if
+    ;; Emacs is still the window's first responder the keystrokes go to Emacs,
+    ;; and no amount of Lisp or JavaScript changes that -- see the Commentary.
+    (message
+     "ghostty-web-term: terminal focused; if keys still go to Emacs, click it (%s hands back)"
+     ghostty-web-term-handoff-chords)))
 
 (defun ghostty-web-term-select ()
   "Select the terminal's window without taking the keyboard.
@@ -428,12 +823,6 @@ Bracketing is left to the page, which checks the terminal's real DECSET
 ;; Nothing is cached, which is the point: a dictation or clipboard-manager tool
 ;; that copies and immediately presses Cmd-V would beat any cache.
 
-(defvar-local ghostty-web-term--client-id nil
-  "Identifier this buffer's page uses when asking Emacs to paste.")
-
-(defvar ghostty-web-term--client-counter 0
-  "Counter handing out `ghostty-web-term--client-id' values.")
-
 (defun ghostty-web-term--buffers ()
   "Return the live buffers showing a ghostty-web terminal."
   (seq-filter (lambda (b) (buffer-local-value 'ghostty-web-term-mode b))
@@ -461,9 +850,13 @@ page from before client ids existed still gets served."
                        bufs))
         (and (= 1 (length bufs)) (car bufs)))))
 
-(defun ghostty-web-term--serve-paste-request (client)
-  "Send the current clipboard to the page identified by CLIENT."
-  (let ((buf (ghostty-web-term--buffer-for-client client)))
+(defun ghostty-web-term--serve-paste-request (client &optional buffer)
+  "Send the current clipboard to the page identified by CLIENT.
+BUFFER, when given, is the terminal the request provably came from -- the
+server that relayed it serves that one terminal and no other -- and is
+preferred over matching CLIENT."
+  (let ((buf (or (and (buffer-live-p buffer) buffer)
+                 (ghostty-web-term--buffer-for-client client))))
     (cond
      ((null buf)
       (message "ghostty-web-term: paste request from unknown client %S" client))
@@ -735,8 +1128,16 @@ Return (OPCODE PAYLOAD REST) or nil when BUF holds no complete frame."
           (process-contact ghostty-web-term--control-process :service)))
   (cons ghostty-web-term--control-port ghostty-web-term--control-token))
 
-(defun ghostty-web-term--control-stop ()
-  "Shut the control server down and forget its clients."
+(defun ghostty-web-term-control-stop ()
+  "Shut the control server down and forget its clients.
+
+The control channel is one listener multiplexing every page by client id, so
+unlike the PTY servers it is not owned by a buffer and nothing stops it when
+a terminal is killed; it is cheap, and `ghostty-web-term--control-ensure'
+brings it back (on a new port, with a new token) for the next terminal.
+Pages whose channel this drops fall back to relaying paste requests through
+their own PTY server's stdout."
+  (interactive)
   (dolist (cell ghostty-web-term--control-clients)
     (ignore-errors (delete-process (cdr cell))))
   (setq ghostty-web-term--control-clients nil)
@@ -830,8 +1231,10 @@ synthesized key event from the page itself."
 (defun ghostty-web-term--set-font-size (px)
   "Set the terminal font size to PX and refit the grid."
   (setq ghostty-web-term-font-size (max 6 (min 48 px)))
+  ;; `setFontSize' refits itself, and does it again once the renderer has
+  ;; remeasured -- a fit from here would only report the pre-measurement grid.
   (ghostty-web-term--eval
-   (format "window.gw && (window.gw.setFontSize(%d), JSON.stringify(window.gw.fit()))"
+   (format "window.gw && String(window.gw.setFontSize(%d))"
            ghostty-web-term-font-size))
   (message "ghostty-web-term: font size %d" ghostty-web-term-font-size))
 
@@ -849,9 +1252,31 @@ the equivalent operation."
   (ghostty-web-term--set-font-size (- ghostty-web-term-font-size (or step 1))))
 
 (defun ghostty-web-term-zoom-reset ()
-  "Reset the terminal font size to 13px."
+  "Reset the terminal font size to 13px, and undo any view magnification."
   (interactive)
-  (ghostty-web-term--set-font-size 13))
+  (ghostty-web-term--set-font-size 13)
+  (ghostty-web-term-zoom-native-reset))
+
+(defun ghostty-web-term-zoom-native-reset ()
+  "Undo WebKit view magnification, leaving font size as the only zoom.
+`xwidget-webkit-zoom' scales the rendered view without reflowing it: dpr and
+`innerWidth' change, `clientWidth' does not, so no `ResizeObserver' fires and a
+stale grid is drawn magnified and clipped.  The keymap redirects the zoom keys,
+but the Zoom In/Out menu and tool bar items still reach it, and magnification
+survives a page reload -- hence a way back.  Only the page can report how far
+the view is scaled, so this is asynchronous."
+  (interactive)
+  (let ((xw (ghostty-web-term--session)))
+    (when xw
+      (xwidget-webkit-execute-script
+       xw "window.gw ? String(window.gw.magnification()) : ''"
+       (lambda (result)
+         (let ((mag (and (stringp result) (string-to-number result))))
+           (when (and mag (> mag 0) (> (abs (- mag 1.0)) 0.01))
+             ;; Additive on magnification: three +0.1 steps take dpr 2 -> 2.6.
+             (xwidget-webkit-zoom xw (- 1.0 mag))
+             (xwidget-webkit-execute-script
+              xw "window.gw && JSON.stringify(window.gw.fit())"))))))))
 
 (defun ghostty-web-term-resync-size ()
   "Resize the widget to its window and refit the terminal grid.
@@ -898,10 +1323,14 @@ inside the page for that case."
   "s-e" #'ghostty-web-term-blur
   "s-t" #'ghostty-web-term-select
   ;; Emacs text scaling cannot resize the widget, so redirect the usual zoom
-  ;; commands to the terminal's own font size.
+  ;; commands to the terminal's own font size.  The WebKit ones too: they only
+  ;; change the view's magnification, which leaves `clientWidth' -- and so the
+  ;; grid -- untouched, magnifying a stale 80x31 into a clipped canvas.
   "<remap> <text-scale-increase>" #'ghostty-web-term-zoom-in
   "<remap> <text-scale-decrease>" #'ghostty-web-term-zoom-out
   "<remap> <text-scale-adjust>" #'ghostty-web-term-zoom-reset
+  "<remap> <xwidget-webkit-zoom-in>" #'ghostty-web-term-zoom-in
+  "<remap> <xwidget-webkit-zoom-out>" #'ghostty-web-term-zoom-out
   "s-=" #'ghostty-web-term-zoom-in
   "s-+" #'ghostty-web-term-zoom-in
   "s--" #'ghostty-web-term-zoom-out
@@ -909,39 +1338,32 @@ inside the page for that case."
   "C-c C-=" #'ghostty-web-term-zoom-in
   "C-c C--" #'ghostty-web-term-zoom-out)
 
-(defcustom ghostty-web-term-stop-server-on-last-kill t
-  "Stop the PTY server once the last terminal buffer is killed.
+(defun ghostty-web-term--kill-buffer-hook ()
+  "Take this terminal's server down with the buffer.
+The shell dies either way -- the server kills its PTY when the page's
+WebSocket closes -- but the node process is this buffer's, and once the
+buffer is gone nothing else would ever notice it is serving nobody.
 
-The server is a singleton shared by every terminal, not something owned by
-a buffer, so killing a buffer does not by itself stop it.  The shell always
-dies with its page -- the server kills the PTY when the WebSocket closes --
-but the server process and Emacs\='s control socket would otherwise sit idle
-until `ghostty-web-term-stop-server\='.
-
-Set to nil to keep the server warm, which makes opening the next terminal
-skip node startup and the readiness handshake."
-  :type 'boolean)
-
-(defun ghostty-web-term--maybe-stop-server ()
-  "Stop the server when no terminal buffers are left.
-Runs from a timer, not directly from `kill-buffer-hook\=': the buffer being
-killed is still live while that hook runs, so counting there would always
-find at least one."
-  (run-with-timer
-   0 nil
-   (lambda ()
-     (when (and ghostty-web-term-stop-server-on-last-kill
-                (null (ghostty-web-term--buffers)))
-       (ghostty-web-term--control-stop)
-       (when (ghostty-web-term--server-live-p)
-         (ghostty-web-term-stop-server))))))
+This is the whole of server lifetime management.  An earlier version
+reference-counted a shared server against the live terminal buffers from a
+timer, which could not work retroactively: buffers opened before the hook
+existed never ran the mode body that installs it, so they never stopped
+anything.  A server owned by one buffer has no such gap."
+  (ghostty-web-term--server-kill ghostty-web-term--server))
 
 (define-minor-mode ghostty-web-term-mode
   "Minor mode for buffers showing a ghostty-web terminal."
   :lighter " Ghostty"
   :keymap ghostty-web-term-mode-map
-  (when ghostty-web-term-mode
-    (add-hook 'kill-buffer-hook #'ghostty-web-term--maybe-stop-server nil t)))
+  (if ghostty-web-term-mode
+      (progn
+        ;; Zoom is per terminal: each buffer drives its own page, so a shared
+        ;; counter would step the next terminal from the wrong size -- zoom one
+        ;; to 20px and the first `=' in another jumps its 13px page to 21.  The
+        ;; defcustom stays the size new terminals open at.
+        (setq-local ghostty-web-term-font-size ghostty-web-term-font-size)
+        (add-hook 'kill-buffer-hook #'ghostty-web-term--kill-buffer-hook nil t))
+    (remove-hook 'kill-buffer-hook #'ghostty-web-term--kill-buffer-hook t)))
 
 ;; Evil's state keymaps outrank ordinary minor-mode maps, so register the
 ;; bindings with evil too when it is present (it is, under Doom).
@@ -954,10 +1376,11 @@ find at least one."
         (kbd "s-e") #'ghostty-web-term-blur
         (kbd "s-t") #'ghostty-web-term-select))))
 
-(defun ghostty-web-term--url (client)
-  "Build the page URL, carrying the token, display preferences and CLIENT id."
-  (let* ((info (ghostty-web-term-start-server))
-         (base (plist-get info :url))
+(defun ghostty-web-term--url (client server)
+  "Build the page URL for CLIENT on SERVER.
+Carries SERVER's token, the control channel's port and token, and the
+display preferences."
+  (let* ((base (plist-get (ghostty-web-term--server-info server) :url))
          (control (ghostty-web-term--control-ensure)))
     (format (concat "%s&fontSize=%d&handoffChords=%s&wheelAltScreen=%s"
                     "&wheelSensitivity=%s&client=%s&ctrlPort=%s&ctrlToken=%s")
@@ -974,45 +1397,58 @@ find at least one."
 (defun ghostty-web-term (&optional new-session)
   "Open a Ghostty terminal in an xwidget buffer.
 With a prefix argument NEW-SESSION, start an additional terminal
-instead of reusing an existing one."
+instead of reusing an existing one.
+
+Each terminal gets its own PTY server, so opening one waits for a node
+startup and its readiness handshake (about a second), and killing the buffer
+takes that server with it."
   (interactive "P")
   (unless (featurep 'xwidget-internal)
     (user-error "ghostty-web-term: this Emacs was built without xwidget support"))
   (unless (display-graphic-p)
     (user-error "ghostty-web-term: xwidgets need a graphical frame"))
-  (let ((existing (unless new-session
-                    (seq-find (lambda (buf)
-                                (buffer-local-value 'ghostty-web-term-mode buf))
-                              (buffer-list)))))
+  (let ((existing (unless new-session (car (ghostty-web-term--buffers)))))
     (if existing
         (pop-to-buffer existing)
-      (let ((client (number-to-string
-                     (setq ghostty-web-term--client-counter
-                           (1+ ghostty-web-term--client-counter)))))
-      (xwidget-webkit-browse-url (ghostty-web-term--url client) t)
-      ;; Find the new buffer explicitly instead of assuming `browse-url' left it
-      ;; current -- it does interactively, but not when called from contexts like
-      ;; `emacsclient --eval', where the mode would land on the wrong buffer.
-      ;; Do not rename it: the xwidget title callback renames the buffer once the
-      ;; page loads and would clobber anything set here, so the name comes from
-      ;; the page title (and tracks the shell's title escapes).
-      ;; Use `xwidget-webkit-last-session-buffer', which
-      ;; `xwidget-webkit--create-new-session-buffer' just set.  Note
-      ;; `xwidget-webkit-current-session' is NOT usable for this: it falls back
-      ;; to the last session, so it returns non-nil in every buffer and would
-      ;; happily identify an unrelated one.
-      (let ((buf (or (and (boundp 'xwidget-webkit-last-session-buffer)
-                          (buffer-live-p xwidget-webkit-last-session-buffer)
-                          xwidget-webkit-last-session-buffer)
-                     (and (derived-mode-p 'xwidget-webkit-mode) (current-buffer)))))
-        (unless buf
-          (user-error "ghostty-web-term: could not find the new xwidget buffer"))
-        (with-current-buffer buf
-          (ghostty-web-term-mode 1)
-          ;; Recorded so a paste request from this page is answered by this
-          ;; buffer and not by some other terminal.
-          (setq ghostty-web-term--client-id client))
-        (pop-to-buffer buf)))))
+      (let* ((client (ghostty-web-term--next-client-id))
+             (server (ghostty-web-term--server-start client))
+             (adopted nil))
+        (unwind-protect
+            (progn
+              (xwidget-webkit-browse-url (ghostty-web-term--url client server) t)
+              ;; Find the new buffer explicitly instead of assuming `browse-url'
+              ;; left it current -- it does interactively, but not when called
+              ;; from contexts like `emacsclient --eval', where the mode would
+              ;; land on the wrong buffer.
+              ;; Do not rename it: the xwidget title callback renames the buffer
+              ;; once the page loads and would clobber anything set here, so the
+              ;; name comes from the page title (and tracks the shell's title
+              ;; escapes).
+              ;; Use `xwidget-webkit-last-session-buffer', which
+              ;; `xwidget-webkit--create-new-session-buffer' just set.  Note
+              ;; `xwidget-webkit-current-session' is NOT usable for this: it
+              ;; falls back to the last session, so it returns non-nil in every
+              ;; buffer and would happily identify an unrelated one.
+              (let ((buf (or (and (boundp 'xwidget-webkit-last-session-buffer)
+                                  (buffer-live-p xwidget-webkit-last-session-buffer)
+                                  xwidget-webkit-last-session-buffer)
+                             (and (derived-mode-p 'xwidget-webkit-mode)
+                                  (current-buffer)))))
+                (unless buf
+                  (user-error "ghostty-web-term: could not find the new xwidget buffer"))
+                (with-current-buffer buf
+                  (ghostty-web-term-mode 1)
+                  ;; Recorded so a message from this page is attributed to this
+                  ;; buffer and not to some other terminal.
+                  (setq ghostty-web-term--client-id client))
+                ;; From here the buffer owns the server: killing it stops the
+                ;; process.
+                (ghostty-web-term--server-adopt server buf)
+                (setq adopted t)
+                (pop-to-buffer buf)))
+          ;; Until the buffer owns it, nothing else knows this server exists, so
+          ;; anything going wrong above would strand a node process.
+          (unless adopted (ghostty-web-term--server-kill server))))))
   (message "ghostty-web-term: all keys go to the shell; %s hands the keyboard to Emacs"
            ghostty-web-term-handoff-chords))
 

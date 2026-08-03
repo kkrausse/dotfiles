@@ -114,6 +114,12 @@ let ws;
 let reconnectAttempt = 0;
 let disposed = false;
 
+// devicePixelRatio at load, while the view's magnification is still 1. Emacs's
+// native xwidget zoom multiplies dpr without reflowing the layout, so this is
+// the only way to see how magnified the view is -- and how far to unzoom it.
+// Reads as 1 if the page is reloaded while already magnified.
+const baseDpr = window.devicePixelRatio || 1;
+
 /**
  * The helper textarea. `Terminal.textarea` is declared in the typings but is not
  * reliably populated in ghostty-web 0.4.0, so fall back to the DOM.
@@ -502,6 +508,21 @@ function sendResize(cols, rows) {
   }
 }
 
+/**
+ * Fit now, then again once the renderer has remeasured its cell.
+ *
+ * ghostty-web takes the new cell size from its next render, so a fit run
+ * synchronously after a font-size change divides the widget by the *old* cell
+ * and leaves the grid a step behind (13px -> 16px fit to 80x29, not 72x25).
+ * The timer, not just the frame, is what makes this reliable: rendering is
+ * rAF-driven and rAF does not fire while the widget is hidden.
+ */
+function refitAfterMetricsChange() {
+  fit.fit();
+  requestAnimationFrame(() => { if (!disposed) fit.fit(); });
+  setTimeout(() => { if (!disposed) fit.fit(); }, 80);
+}
+
 function sendInput(data) {
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type: 'input', data }));
@@ -632,7 +653,8 @@ async function main() {
     selectAll: () => { term.selectAll(); return true; },
     fit: () => { fit.fit(); return { cols: term.cols, rows: term.rows }; },
     resize: (cols, rows) => { term.resize(cols, rows); sendResize(cols, rows); return true; },
-    setFontSize: (px) => { term.options.fontSize = Number(px); fit.fit(); return term.options.fontSize; },
+    setFontSize: (px) => { term.options.fontSize = Number(px); refitAfterMetricsChange(); return term.options.fontSize; },
+    magnification: () => (window.devicePixelRatio || 1) / baseDpr,
     clear: () => { term.clear(); return true; },
     title: () => window.gwTitle || '',
     mouseTracking: () => mouseTrackingOn(),
