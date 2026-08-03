@@ -27,10 +27,9 @@ orgconfig.el
 # Corporate Java trust store -- machine-local
 /cacerts
 
-# Prebuilt binaries: platform-specific and far too large for a dotfiles repo.
-# Install via brew/upstream instead. Scripts in bin/ are still tracked.
-/bin/aws-sso-creds
-/bin/mcfly
+# Whatever is on ~/.bin: prebuilt binaries too large for a repo, plus scripts
+# that reference internal infrastructure. Install from brew/upstream instead.
+/bin/
 
 # Built on demand -- see ghostty-web-emacs/module/Makefile
 *.dylib
