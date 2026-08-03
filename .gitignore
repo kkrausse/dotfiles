@@ -16,3 +16,21 @@ pom.xml.asc
 /.clj-kondo/.cache/
 /.lsp/.cache/
 orgconfig.el
+
+# Scratch files
+/tmp
+/tmp.org
+
+# Source checkouts kept locally for xref/reference only (emacs C sources)
+/doom.d/repos/
+
+# Corporate Java trust store -- machine-local
+/cacerts
+
+# Prebuilt binaries: platform-specific and far too large for a dotfiles repo.
+# Install via brew/upstream instead. Scripts in bin/ are still tracked.
+/bin/aws-sso-creds
+/bin/mcfly
+
+# Built on demand -- see ghostty-web-emacs/module/Makefile
+*.dylib
