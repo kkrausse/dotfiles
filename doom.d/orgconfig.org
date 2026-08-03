@@ -574,6 +574,14 @@ in `input' to get back edits made by the model"
 #+end_src
 ** utility functions
 #+begin_src elisp
+(defun file-notify-rm-all-watches ()
+  "Remove all existing file notification watches from Emacs."
+  (interactive)
+  (maphash
+   (lambda (key _value)
+     (file-notify-rm-watch key))
+   file-notify-descriptors))
+
 (defmacro kev-setq-local (&rest kvs)
   `(progn
      ,@(mapcar
@@ -829,7 +837,7 @@ If no such vterm buffer exists, print a message and return nil."
 ;; for evil-escape package
 ;; so much better than key chord!!
 (setq-default evil-escape-key-sequence "jj")
-(setq-default evil-escape-delay 0.2)
+(setq-default evil-escape-delay 0.3)
 
 #+end_src
 
@@ -1285,6 +1293,12 @@ org-roam setup and shortcuts
                                       (s-join " -> "))))
                (s-join "|")))
 
+(defun kev/backlink-is-daily? (backlink)
+  (thread-last backlink
+               (org-roam-backlink-source-node)
+               (org-roam-node-file)
+               (org-roam-dailies--daily-note-p)))
+
 
 (after! org-roam
 
@@ -1470,7 +1484,6 @@ org-roam setup and shortcuts
 
   ;; define some keys everywhere
   (setq org-roam-v2-ack t
-        org-roam-dailies-directory "daily/"
         org-roam-preview-function #'kev/org-roam-preview)
   org-roam-node-display-template "${title}"
   ;; this doesn't get called for some reason?
@@ -1491,6 +1504,54 @@ org-roam setup and shortcuts
   ;; then when you insert the node, you'd undo the prefix when inserting.
   ;; then you don't have to worry about having super generic titles
   )
+
+#+end_src
+
+*** subnode migration
+
+so subnodes uses subnode ids, but I wanna use like "parents" or something
+
+This is a one-shot migration, so it is a function to call by hand -- e.g.
+=(kev-roam-name-subnodes "~/org-roam/some-file.org")=. It rewrites and saves the
+file it is given, so do not run it from a hook.
+
+#+begin_src elisp
+;; oh golly
+(require 'org-roam-node)
+
+(defun kev-roam-id->link (id)
+  (concat "[[id:"
+          id
+          "]["
+          (org-roam-node-title (org-roam-node-from-id id))
+          "]]"))
+
+(defun kev-roam-name-subnodes (f)
+  (with-current-buffer (find-file-noselect f)
+    (org-mode)
+    (goto-char (point-min))
+    (org-map-entries
+     (lambda ()
+       (let ((subnodes (thread-last (org-entry-properties)
+                                    (assoc "SUBNODE_OF")
+                                    (cdr))))
+         (when subnodes
+           (org-set-property
+            "PARENTS"
+            (thread-first subnodes
+                          (string-trim)
+                          (split-string " ")
+                          (thread-last
+                            (seq-filter '(lambda (s)
+                                           (not
+                                            (string= s ""))))
+                            (seq-map #'kev-roam-id->link))
+                          (string-join " ")
+                          ))))
+       )
+     nil 'file)
+    (save-buffer)
+    ))
 
 #+end_src
 
@@ -1526,9 +1587,9 @@ org ref seems better than citar! bc
 #+begin_src elisp
 
 ;; org-ref stuff
-(setq bibtex-completion-bibliography '("~/Desktop/bibliography/refs.bib")
+(setq ;; bibtex-completion-bibliography '("~/Desktop/bibliography/refs.bib")
       ;; NOTE needs the trailing slash! idk why the fudge
-      bibtex-completion-library-path '("~/Desktop/bibliography/pdfs/")
+      ;; bibtex-completion-library-path '("~/Desktop/bibliography/pdfs/")
 
       bibtex-completion-additional-search-fields '(keywords)
       ;; bibtex-completion-display-formats
@@ -1674,6 +1735,8 @@ org ref seems better than citar! bc
 #+begin_src elisp
 ;; lsp uses typescript-language-server
 ;; with npm i -g typescript-language-server
+
+;; auto set up by doom
 ;; (add-hook! typescript-mode
 ;;   (lsp)
 ;;   (lsp-mode 1)
@@ -1714,7 +1777,7 @@ i think this should be handled so commented, hook adding issues maybe
 (defvar kev/py-shell-interpreter "python3"
   "no spaces allowed! a restriction of python.el")
 
-(defvar kev/py-shell-dir "/ssh:kkrausse@diesel2:/home/kkrausse/repos/kkrausse/memory-mistral")
+(defvar kev/py-shell-dir ".")
 
 ;; (add-to-list 'display-buffer-alist '("\\*org-roam.*\\*" . (display-buffer-reuse-window display-buffer-same-window)))
 
@@ -1882,6 +1945,8 @@ nice keybindings
                  indent-region-function nil
                  cider-comment-postfix ")"
 
+        ;; sets font locking via nrepl
+        cider-font-lock-dynamically '(macro core function var deprecated)
                  clojure-toplevel-inside-comment-form t
                  ;; code alignment
                  clojure-align-forms-automatically t
@@ -1899,7 +1964,13 @@ nice keybindings
                (lsp-format-buffer)
                (clojure-align (point-min) (point-max))))
 
-           ;; (define-clojure-indent (into 1) (do-template 2) (sc.api/letsc 1) (macrolet '(1 ((:defn)) nil)))
+           ;; use put-clojure-indent (a function) instead of define-clojure-indent:
+           ;; the macro's args get eager-macroexpanded before clojure-mode loads,
+           ;; and `macrolet' collides with elisp's cl-macrolet alias
+           (put-clojure-indent 'into 1)
+           (put-clojure-indent 'do-template nil)
+           (put-clojure-indent 'sc.api/letsc 1)
+           (put-clojure-indent 'macrolet '(1 ((:defn)) nil))
            )
 
 (define-advice aggressive-indent--indent-if-changed (:around (orig-fun buffer) aggressive-indent-advice)
@@ -1947,7 +2018,7 @@ nice keybindings
                                              ")")
                                      nil
                                      (cider-defun-at-point 'bounds)
-                                     (cider--nrepl-pr-request-map)))
+                                     (cider--nrepl-pr-request-plist)))
       "en" #'cider-eval-ns-form
       "="  #'kev-format-form
       "ip" #'(lambda () (interactive) (insert "clojure.pprint/pprint")))
@@ -1968,9 +2039,6 @@ nice keybindings
      (start-file-process "babashka" "*babashka*" "bb" "--nrepl-server" "0")
      process-filter)))
 #+end_src
-
-#+RESULTS:
-: cider-jack-in-babashka
 
 lsp utils
 
@@ -2079,12 +2147,15 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
            ;; I don't think these are required?
            ;; (evil-set-command-property 'evil-ex-search-next :jump nil)
            ;; (evil-set-command-property 'evil-ex-search-backward :jump nil)
-           (map! :map lsp-command-map
-                 ;; TODO maybe prefix will fix lack of docs
-                 "gb" #'xref-go-back
-                 "gf" #'xref-go-forward
-                 "d" #'lsp-ui-doc-glance)
-           (map! "s-l" lsp-command-map)
+
+           ;; changed these to be in the after portion and seemed to fix gb not being mapped
+           ;;
+           ;; (map! :map lsp-command-map
+           ;;       ;; TODO maybe prefix will fix lack of docs
+           ;;       "gb" #'xref-go-back
+           ;;       "gf" #'xref-go-forward
+           ;;       "d" #'lsp-ui-doc-glance)
+           ;; (map! :nv "SPC l" lsp-command-map)
 
            (lsp-diagnostics-mode 0)
 
@@ -2144,6 +2215,15 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
 (after! lsp-mode
   (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]public\\'" "")
   (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]\\tmp\\'")
+  ;; idk chat says this second one too
+  (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]tmp\\'")
+
+           (map! :map lsp-command-map
+                 ;; TODO maybe prefix will fix lack of docs
+                 "gb" #'xref-go-back
+                 "gf" #'xref-go-forward
+                 "d" #'lsp-ui-doc-glance)
+           (map! :nv "SPC l" lsp-command-map)
   )
 
 
