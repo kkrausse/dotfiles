@@ -70,3 +70,44 @@
 ;;
 ;; You can also try 'gd' (or 'C-c c d') to jump to their definition and see how
 ;; they are implemented.
+
+;; emacsclient needs a running server; without one nothing outside Emacs can
+;; read or drive this session. Whichever instance starts first owns the socket.
+(defun kev/start-emacs-server ()
+  (require 'server)
+  (unless (or (daemonp) (server-running-p))
+    (server-start)))
+(add-hook 'emacs-startup-hook #'kev/start-emacs-server)
+
+;; Render docs lookups in-buffer via WebKit. Needs a GUI frame and an
+;; xwidgets build; Doom's helper falls back to browse-url in a TTY, so
+;; `emacs -nw' silently keeps the old behavior.
+(setq +lookup-open-url-fn #'+lookup-xwidget-webkit-open-url-fn)
+(map! "C-c w" #'xwidget-webkit-browse-url)
+
+;; `kev/markdown-preview-xwidget' renders the current markdown buffer in a
+;; WebKit view, themed from the loaded Emacs theme. No keybinding yet; invoke
+;; it with M-x. Needs a markdown CLI on PATH (marked, pandoc, ...).
+(load-file (expand-file-name "local-packages/markdown-preview-xwidget.el"
+                             doom-user-dir))
+
+;; `ghostty-web-term' runs a real shell in a WebKit xwidget, rendered by
+;; ghostty-web's WASM VT parser over a Node PTY server (one server per terminal
+;; buffer). See local-packages/ghostty-web-emacs/README.md.
+(load-file (expand-file-name "local-packages/ghostty-web-emacs/ghostty-web-term.el"
+                             doom-user-dir))
+
+;; Follow window selection with the keyboard, so switching to the terminal's
+;; window means you can type in it.
+;;
+;; Emacs cannot do this by itself: nothing in the NS port hands an xwidget first
+;; responder, so without help the page correctly says "Emacs has the keyboard --
+;; click to type". The mode uses module/gw-focus.dylib, a small AppKit module
+;; compiled on demand and loaded lazily the first time the keyboard needs to
+;; move (Emacs modules cannot be unloaded, so it is not loaded at startup).
+;;
+;; The cost of having it on: any command that selects the terminal's window now
+;; also takes the keyboard from Emacs, and `C-w' (or `C-<escape>') is the way
+;; back. Prompts, macros and half-typed prefixes are excluded. Set to -1 to turn
+;; it off and go back to clicking.
+(ghostty-web-term-autofocus-mode 1)
