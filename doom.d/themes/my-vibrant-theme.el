@@ -34,8 +34,8 @@ determine the exact padding."
   "A dark theme based off of doom-one with more vibrant colors."
 
   ;; name        gui       256       16
-  ((bg         '("grey3"   "grey3"  nil)) ;;
-   (bg-alt     '("grey15"  "grey15"  nil)) ;; current line hightlighted & dired
+  ((bg         '("grey3"   "#080808" "black"))
+   (bg-alt     '("grey15"  "#262626" "black")) ;; current line hightlighted & dired
    (base0      '("#1B2229" "black"   "black"        ))
    (base1      '("#1c1f24" "#1e1e1e" "brightblack"  ))
    (base2      '("#21272d" "#21212d" "brightblack"  ))
@@ -45,24 +45,30 @@ determine the exact padding."
    (base6      '("#757B80" "#7b7b7b" "brightblack"  ))
    (base7      '("#9ca0a4" "#979797" "brightblack"  ))
    (base8      '("#DFDFDF" "#dfdfdf" "white"        ))
-   (fg         '("grey70" "grey70" ))
-   (fg-alt     '("grey85" "grey85" ))
-   ;;(fg         '("grey70" "grey70" ))
-   ;;(fg-alt     '("grey85" "grey85" ))
+   (fg         '("grey70"  "#b2b2b2" "white"        ))
+   (fg-alt     '("grey85"  "#d9d9d9" "brightwhite"  ))
 
    (grey       base4)
-   (red        '("#ed5147" "#ff6655" ))
-   (orange     '("#e69055" "#dd8844" ))
-   (green      '("#3bd188" "#99bb66" ))
-   (dark-green '("#01753b" "#01753b" ))
-   (teal       '("#4db5bd" "#44b9b1" ))
-   (yellow     '("#FCCE7B"           ))
-   (blue       '("#7A7AFF"           ))
-   (dark-blue  '("#1f5582"           ))
-   (magenta    '("#db7b9e"           ))
-   (violet     '("#d481d0"           )) ;a9a1e1
-   (cyan       '("#5cEfFF"           ))
-   (dark-cyan  '("#6A8FBF"           ))
+   (red        '("#ed5147" "#ff6655" "brightred"    ))
+   (orange     '("#e69055" "#dd8844" "yellow"       ))
+   (green      '("#3bd188" "#99bb66" "brightgreen"  ))
+   (teal       '("#4db5bd" "#44b9b1" "cyan"         ))
+   (yellow     '("#FCCE7B" "#ffd7af" "brightyellow" ))
+   (blue       '("#7A7AFF" "#8787ff" "brightblue"   ))
+   (dark-blue  '("#1f5582" "#005f87" "blue"         ))
+   (magenta    '("#db7b9e" "#d787af" "brightmagenta"))
+   ;; was #d481d0, which sat 0.023 from `teal' under deuteranopia/protanopia --
+   ;; i.e. identical to a red-green eye. This is 0.080 away and higher contrast.
+   (violet     '("#e0a3ff" "#d7afff" "magenta"      )) ;a9a1e1, #d481d0
+   (cyan       '("#5cEfFF" "#5fffff" "brightcyan"   ))
+   (dark-cyan  '("#6A8FBF" "#5f87af" "blue"         ))
+
+   ;; Diff backgrounds. A conventional dark-green/dark-red pair measures 0.046
+   ;; apart under red-green simulation -- effectively the same color. This pair
+   ;; still reads green/red to normal vision but separates on lightness (0.125),
+   ;; which is an axis red-green deficiency leaves intact. Measured sep: 0.108.
+   (diff-added-bg   '("#082800" "#002200" "black"      ))
+   (diff-removed-bg '("#503838" "#585858" "brightblack"))
 
    ;; remoinder that color wheel is:
    ;; rgb
@@ -138,17 +144,26 @@ determine the exact padding."
    ;;;;;;;; Brackets ;;;;;;;;
    ;; Rainbow-delimiters
 
+   ;; 4-colour cycle rather than 3: adding blue widens the spread on the
+   ;; blue<->yellow axis, which is the axis that survives red-green deficiency.
+   ;; Depths 3/4 used to be defined twice; the duplicates are gone.
    (rainbow-delimiters-depth-1-face :foreground (doom-lighten red 0.5))
    (rainbow-delimiters-depth-2-face :foreground yellow)
    (rainbow-delimiters-depth-3-face :foreground (doom-lighten cyan 0.2))
-   (rainbow-delimiters-depth-4-face :foreground (doom-lighten red 0.5))
-   (rainbow-delimiters-depth-5-face :foreground yellow)
-   (rainbow-delimiters-depth-6-face :foreground cyan)
-   (rainbow-delimiters-depth-3-face :foreground (doom-lighten cyan 0.2))
-   (rainbow-delimiters-depth-4-face :foreground (doom-lighten red 0.5))
+   (rainbow-delimiters-depth-4-face :foreground blue)
+   (rainbow-delimiters-depth-5-face :foreground (doom-lighten red 0.5))
+   (rainbow-delimiters-depth-6-face :foreground yellow)
+   (rainbow-delimiters-depth-7-face :foreground (doom-lighten cyan 0.2))
+   (rainbow-delimiters-depth-8-face :foreground blue)
+   (rainbow-delimiters-depth-9-face :foreground (doom-lighten red 0.5))
+   ;; unmatched/mismatched must not rely on hue alone
+   (rainbow-delimiters-unmatched-face  :foreground red :weight 'bold :underline t)
+   (rainbow-delimiters-mismatched-face :foreground red :weight 'bold :underline t)
    ;; Bracket pairing
    ((show-paren-match &override) :foreground nil :background base5 :bold t)
-   ((show-paren-mismatch &override) :foreground nil :background "red")
+   ;; was the raw X11 "red", not the theme's red; also gains a weight cue so the
+   ;; mismatch reads as different from `show-paren-match' without relying on hue
+   ((show-paren-mismatch &override) :foreground bg :background red :weight 'bold)
 
    ((clojure-keyword-face &override) :foreground magenta :bold nil)
    ;; from
@@ -171,15 +186,22 @@ determine the exact padding."
    (doom-modeline-buffer-path :foreground base8 :bold bold)
 
    ;; omg this was such a pita
-   ((orderless-match-face-0 &override) :foreground base1)
-   ((orderless-match-face-1 &override) :foreground base1)
-   ((orderless-match-face-2 &override) :foreground base1)
-   ((orderless-match-face-3 &override) :foreground base1)
-   (custom-modified :foreground red :background yellow)
-   (custom-modified :foreground red :background yellow)
+   ;; (dark text on the solid match background -- that part was right). Slots 2
+   ;; and 3 were green/yellow, which measure 0.051 apart under red-green
+   ;; simulation; cyan/orange spread the four slots to a 0.112 worst pair.
+   ((orderless-match-face-0 &override) :foreground base1 :background blue)
+   ((orderless-match-face-1 &override) :foreground base1 :background magenta)
+   ((orderless-match-face-2 &override) :foreground base1 :background cyan)
+   ((orderless-match-face-3 &override) :foreground base1 :background orange)
+   ;; was defined three times; the first two were identical and dead
    ((custom-modified &override) :foreground red :background (doom-blend blue bg 0.5))
-   ((completions-common-part &override) :background red :inherit 'evil-ex-lazy-highlight)
-   ((completions-first-difference &override) :background red :inherit 'evil-ex-lazy-highlight)
+   ;; these two were both :background red, so they marked the same thing twice.
+   ;; common-part is the prefix you already typed; first-difference is where the
+   ;; candidates diverge -- that one gets the attention-grabbing treatment.
+   ((completions-common-part &override)
+    :foreground fg-alt :background dark-blue :weight 'normal)
+   ((completions-first-difference &override)
+    :foreground fg-alt :background red :weight 'bold :underline t)
   ;;  (evil-ex-lazy-highlight :background (doom-darken cyan 0.3) :inherit 'shadow)
    (mode-line
     :background modeline-bg :foreground modeline-fg
@@ -218,11 +240,38 @@ determine the exact padding."
    (lsp-ui-peek-highlight :foreground yellow :inherit 'bold)
 
    ;; various doom things are inherited from these.
-   ;(diff-refine-added :inherit 'diff-added :background (doom-darken green 0.5))
-   (magit-diff-added-highlight :inherit 'diff-added :background (doom-darken green 0.7))
-   (magit-diff-added :inherit 'diff-added :background (doom-darken green 0.7))
-   (smerge-lower :inherit 'diff-added)
+   ;;
+   ;; Added/removed is the most consequential distinction in the editor, and it
+   ;; was previously carried by hue alone -- with only the added side actually
+   ;; overridden, so the two were never balanced against each other. Removed now
+   ;; also carries italic, so the cue survives even if the colours don't.
+   (diff-added                     :background diff-added-bg)
+   (diff-removed                   :background diff-removed-bg :slant 'italic)
+   (diff-refine-added              :background (doom-lighten diff-added-bg 0.20) :weight 'bold)
+   (diff-refine-removed            :background (doom-lighten diff-removed-bg 0.20) :weight 'bold :slant 'italic)
+   (magit-diff-added               :inherit 'diff-added)
+   (magit-diff-added-highlight     :background (doom-lighten diff-added-bg 0.12) :foreground fg-alt)
+   (magit-diff-removed             :inherit 'diff-removed)
+   ;; fg-alt rather than fg: default fg on this lighter background is only
+   ;; 3.5:1, below AA. fg-alt brings it to 5.3:1 without giving up separation.
+   (magit-diff-removed-highlight   :background (doom-lighten diff-removed-bg 0.12) :foreground fg-alt :slant 'italic)
+   (smerge-lower                   :inherit 'diff-added)
+   (smerge-upper                   :inherit 'diff-removed)
+   (smerge-refined-added           :inherit 'diff-refine-added)
+   (smerge-refined-removed         :inherit 'diff-refine-removed)
    ;; (magit-diff-base :background "darkgreen")
+
+   ;; ediff is entirely hue-coded out of the box; reuse the measured pair
+   (ediff-current-diff-A        :background diff-removed-bg :slant 'italic)
+   (ediff-current-diff-B        :background diff-added-bg)
+   (ediff-current-diff-C        :background (doom-blend blue bg 0.25))
+   (ediff-fine-diff-A           :background (doom-lighten diff-removed-bg 0.20) :weight 'bold :slant 'italic)
+   (ediff-fine-diff-B           :background (doom-lighten diff-added-bg 0.20) :weight 'bold)
+   (ediff-fine-diff-C           :background (doom-blend blue bg 0.40) :weight 'bold)
+   (ediff-even-diff-A           :background bg-alt :slant 'italic)
+   (ediff-even-diff-B           :background bg-alt)
+   (ediff-odd-diff-A            :background base3 :slant 'italic)
+   (ediff-odd-diff-B            :background base3)
 
    ;; stolen from doom-solarized-dark-high
    ;; emacs/.local/straight/repos/themes/themes/doom-solarized-dark-high-contrast-theme.el
@@ -253,6 +302,39 @@ determine the exact padding."
    (vterm-color-magenta :background (doom-lighten magenta 0.75) :foreground magenta)
    (vterm-color-cyan    :background (doom-lighten cyan 0.75)    :foreground cyan)
    (vterm-color-white   :background (doom-lighten base8 0.75)   :foreground base8)
+   ;; bright slots were unset, so bright ANSI output fell through to vterm's
+   ;; own defaults and ignored this palette entirely
+   (vterm-color-bright-black   :background (doom-lighten base5 0.75)              :foreground base5)
+   (vterm-color-bright-red     :background (doom-lighten (doom-lighten red 0.3) 0.75)     :foreground (doom-lighten red 0.3))
+   (vterm-color-bright-green   :background (doom-lighten (doom-lighten green 0.3) 0.75)   :foreground (doom-lighten green 0.3))
+   (vterm-color-bright-yellow  :background (doom-lighten (doom-lighten yellow 0.3) 0.75)  :foreground (doom-lighten yellow 0.3))
+   (vterm-color-bright-blue    :background (doom-lighten (doom-lighten blue 0.3) 0.75)    :foreground (doom-lighten blue 0.3))
+   (vterm-color-bright-magenta :background (doom-lighten (doom-lighten magenta 0.3) 0.75) :foreground (doom-lighten magenta 0.3))
+   (vterm-color-bright-cyan    :background (doom-lighten (doom-lighten cyan 0.3) 0.75)    :foreground (doom-lighten cyan 0.3))
+   (vterm-color-bright-white   :background (doom-lighten fg-alt 0.75)             :foreground fg-alt)
+
+   ;;;; numbers -- font-lock-number-face is a distinct face in Emacs 29+, and it
+   ;;;; was NOT picking up the bold that `font-lock-constant-face' gets below.
+   ;;;; violet numbers against teal variables measured 0.023 apart under
+   ;;;; red-green simulation, which is indistinguishable; they sit adjacent
+   ;;;; constantly (`x = 42'). Weight is the cue that survives regardless.
+   ((font-lock-number-face &override) :weight 'bold)
+
+   ;;;; flycheck -- differentiate by underline STYLE, not only colour
+   (flycheck-error   :underline `(:style wave :color ,red))
+   (flycheck-warning :underline `(:style wave :color ,yellow) :weight 'bold)
+   (flycheck-info    :underline `(:style line :color ,cyan))
+   (flycheck-fringe-error   :foreground red     :weight 'bold)
+   (flycheck-fringe-warning :foreground yellow  :weight 'bold)
+   (flycheck-fringe-info    :foreground cyan)
+
+   ;;;; hl-todo
+   (hl-todo :weight 'bold :slant 'italic)
+
+   ;;;; org keywords -- done is distinguished by lightness + weight rather than
+   ;;;; the usual red/green pair
+   ((org-todo &override) :foreground orange :weight 'bold)
+   ((org-done &override) :foreground comments :weight 'normal)
    )
   ;; base theme variable overrides
   ())
