@@ -157,7 +157,9 @@ cd dotfiles
 ln -s $(pwd)/doom.d/ ~/.doom.d
 ln -s $(pwd)/vimrc ~/.vimrc
 
-# nah this is dumb ln -s $(pwd)/zshrc ~/.zshrc -- instead:
+# ~/.zshrc is a real file per machine, not a symlink: it sources the shared
+# config from here and then adds whatever is local to that machine (work paths,
+# credentials). Keeping it that way is what lets this repo stay public.
 echo "source $(pwd)/zshrc" >> ~/.zshrc
 
 ln -s $(pwd)/gitconfig ~/.gitconfig
@@ -167,4 +169,7 @@ ln -s $(pwd)/clj-kondo ~/.clj-kondo
 ln -s $(pwd)/clojure ~/.clojure
 # idk if even needed
 ln -s $(pwd)/bin ~/.bin
+
+ln -s $(pwd)/ghostty_config ~/.config/ghostty/config
+ln -s $(pwd)/tmux.conf ~/.tmux.conf
 #+end_src
