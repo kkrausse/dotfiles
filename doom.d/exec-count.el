@@ -42,9 +42,17 @@ naive \"first non-flag arg\" just reports the config token every time."
     (unwind-protect (apply orig program args)
       (ec/-record program args (- (float-time) start)))))
 
-;; call-process/process-file are (PROGRAM &optional INFILE BUFFER DISPLAY &rest ARGS)
-(dolist (fn '(call-process process-file))
-  (advice-add fn :around #'ec/-advice '((name . ec))))
+;; Only `call-process'. Do NOT also advise `process-file': it is a lisp function
+;; that dispatches to the call-process subr for local files, so advising both
+;; counts every local exec twice. (For remote/TRAMP paths process-file does not
+;; exec locally at all, so nothing is missed here.)
+(advice-add 'call-process :around #'ec/-advice '((name . ec)))
+(advice-add 'call-process-region :around
+            (lambda (orig start end program &rest args)
+              (let ((s (float-time)))
+                (unwind-protect (apply orig start end program args)
+                  (ec/-record program args (- (float-time) s)))))
+            '((name . ec)))
 
 ;; make-process takes a plist; pull the command out of it
 (defun ec/-make-process-advice (orig &rest plist)
@@ -57,9 +65,8 @@ naive \"first non-flag arg\" just reports the config token every time."
 (defun ec/unhook ()
   "Remove the advice."
   (interactive)
-  (dolist (fn '(call-process process-file))
+  (dolist (fn '(call-process call-process-region make-process))
     (advice-remove fn 'ec))
-  (advice-remove 'make-process 'ec)
   (message "exec-count: unhooked"))
 
 (defun ec/report ()
