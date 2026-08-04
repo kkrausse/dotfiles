@@ -963,11 +963,14 @@ line numbers
 
 *** git costs 280ms per exec here
 
-SentinelOne scans every ~exec~: 50 ~git rev-parse~ calls take 14s, the same loop
-over ~/bin/true~ takes 0.8s. So the only lever is calling git fewer times, and
-it's a weak one -- the below only gets magit status from 6.6s to 5.2s, because
-what's left is sections you actually want. The fix that matters is an IT
-exclusion for git. Use ~(setq magit-refresh-verbose t)~ to re-measure.
+SentinelOne taxes every ~exec~ ~265ms, flat. Not just git and not just homebrew:
+~git --version~, ~jq --version~ and apple's own ~/usr/bin/true~ all measure
+262-275ms, while a fork with no exec is free (7ms) and the work the process then
+does is noise. So cost == number of execs, and no binary is exempt.
+
+Which makes this a weak lever -- the below only gets magit status from 6.6s to
+5.2s, since what's left is sections you actually want. The fix that matters is an
+IT exclusion. Use ~(setq magit-refresh-verbose t)~ to re-measure.
 
 #+begin_src elisp
 ;; VC shells out to git on every file visit, save, and modeline redisplay, and
