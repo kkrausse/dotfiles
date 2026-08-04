@@ -52,26 +52,34 @@ export PATH="/opt/homebrew/opt/texinfo/bin:$PATH"
 
 ##### machine / fs specific #########
 
-#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
+# sdkman's init script costs ~1.6s, almost all of it spent re-deriving PATH and
+# JAVA_HOME that the `current' symlinks already encode. Point at the symlinks
+# directly (no subprocesses) and load the real script only when `sdk' is run.
 export SDKMAN_DIR="$HOME/.sdkman"
-[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
+# (N-/) not (N/): `current' is a symlink, and plain `/' skips symlinked dirs.
+for _sdk_candidate in "$SDKMAN_DIR"/candidates/*/current(N-/); do
+  export PATH="$_sdk_candidate/bin:$PATH"
+done
+unset _sdk_candidate
+[ -d "$SDKMAN_DIR/candidates/java/current" ] && \
+  export JAVA_HOME="$SDKMAN_DIR/candidates/java/current"
 
-function run_if_command_exists {
-    local command_to_check="$1"
-    shift
-    if command -v "$command_to_check" >/dev/null 2>&1; then
-        "$@"
-    else
-        echo "-- ignoring $command_to_check stuff"
-    fi
+# Lazy shim: the first `sdk' call replaces this function with the real one.
+sdk() {
+  unfunction sdk
+  source "$SDKMAN_DIR/bin/sdkman-init.sh"
+  sdk "$@"
 }
 
-# go stuff
-run_if_command_exists go \
-  export PATH="$(go env GOPATH)/bin:$PATH";
+# go stuff -- `go env GOPATH' is a 300ms subprocess for a value that is just the
+# default; override GOPATH before this file if it ever stops being $HOME/go.
+export PATH="${GOPATH:-$HOME/go}/bin:$PATH"
 
-run_if_command_exists python3 \
-  export PATH="$(python3 -m site --user-base)/bin:$PATH"
+# Same idea for `python3 -m site --user-base' (~570ms): glob the versioned dir
+# and take the highest, rather than asking Python to tell us where it lives.
+_py_user_bins=("$HOME"/Library/Python/*/bin(Nn))
+[ ${#_py_user_bins} -gt 0 ] && export PATH="${_py_user_bins[-1]}:$PATH"
+unset _py_user_bins
 
 # uh need to fix this grbg to not be checked in
 export NVM_DIR="$HOME/.nvm"
@@ -89,8 +97,9 @@ fi
 export PATH="/usr/local/opt/libpq/bin:$PATH"
 export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
 
-source $HOME/miniconda/bin/activate
-conda activate base2
+# conda removed: activating base2 cost ~1.5s of every shell start (and so ~1.5s
+# of every Emacs start, via exec-path-from-shell) and nothing here needs it. To
+# use it again, run `source ~/miniconda/bin/activate' by hand in that shell.
 
 . "$HOME/.local/bin/env"
 

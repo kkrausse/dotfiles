@@ -28,7 +28,9 @@ notes:
 ;; finer grained font size control
 (setq doom-font-increment 1
       use-package-always-defer 't
-      use-package-compute-statistics 't)
+      ;; times every use-package form for `M-x use-package-report'. off unless
+      ;; measuring; doom turns it on for `emacs --debug-init' anyway.
+      use-package-compute-statistics nil)
 
 ;; c source directory
 ;; `git clone --branch emacs-28.2 --depth 1 https://github.com/emacs-mirror/emacs repos/emacs`
@@ -84,6 +86,8 @@ notes:
 
 ;; I think needed for env vars in the shell?
 ;; might actuall not be
+;; runs `zsh -ic', so it costs exactly one shell start. if it's slow again, time
+;; `zsh -ic exit' first -- the cost is in the zshrc, not here.
 (use-package! exec-path-from-shell :defer nil)
 (after! exec-path-from-shell
   (setq exec-path-from-shell-variables '("PATH" "NVM_DIR" "JAVA_HOME"))
@@ -126,6 +130,7 @@ doom-modeline package for [[https://github.com/seagle0128/doom-modeline][dopenes
 #+begin_src elisp :results silent
 (after! doom-modeline
   (doom-modeline-mode 1)
+
   (setq doom-modeline-percent-position nil
         doom-modeline-height 1)
 
@@ -140,9 +145,10 @@ doom-modeline package for [[https://github.com/seagle0128/doom-modeline][dopenes
 
   ;; look
   ;; got rid of lsp, modals, repl, buffer-encoding, major-mode, checker
+  ;; also vcs: it read the branch from VC, which spawns git (~280ms here)
   (doom-modeline-def-modeline 'kev-main-modeline
       '(eldoc bar workspace-name window-number matches follow buffer-info remote-host buffer-position word-count parrot selection-info)
-      '(compilation objed-state misc-info persp-name battery grip irc mu4e gnus github debug lsp minor-modes input-method indent-info process vcs))
+      '(compilation objed-state misc-info persp-name battery grip irc mu4e gnus github debug lsp minor-modes input-method indent-info process))
 
   (add-hook! 'doom-modeline-mode-hook
     (doom-modeline-set-modeline 'kev-main-modeline 'default))
@@ -936,6 +942,12 @@ line numbers
 (define-advice doom-modeline-update-buffer-file-state-icon
     (:around (orig-fun &rest _) doom-modeline-advice)
   (funcall kev-cached-modeline-buffer-file-state))
+
+;; ~1600 packages are still byte-code only, so emacs JIT native-compiles them in
+;; background subprocesses as they load and the burst starves redisplay -- that's
+;; the scroll stutter. cap the pool. `doom build' clears the backlog for good.
+(setq native-comp-async-jobs-number 2)
+(setq native-comp-async-report-warnings-errors 'silent)
 #+end_src
 
 ** Project management
@@ -947,6 +959,43 @@ line numbers
   (add-to-list 'browse-at-remote-remote-type-regexps
                '(:host "github.dev.pages$" :type "github"))
   )
+#+end_src
+
+*** git costs 280ms per exec here
+
+SentinelOne scans every ~exec~: 50 ~git rev-parse~ calls take 14s, the same loop
+over ~/bin/true~ takes 0.8s. So the only lever is calling git fewer times, and
+it's a weak one -- the below only gets magit status from 6.6s to 5.2s, because
+what's left is sections you actually want. The fix that matters is an IT
+exclusion for git. Use ~(setq magit-refresh-verbose t)~ to re-measure.
+
+#+begin_src elisp
+;; VC shells out to git on every file visit, save, and modeline redisplay, and
+;; magit covers everything it was used for. (also dropped `vcs' from the modeline)
+(setq vc-handled-backends nil)
+
+(after! magit
+  ;; don't rebuild status after every command; `g' still refreshes
+  (setq magit-refresh-status-buffer nil)
+  ;; refine-hunk costs an extra `git diff' per hunk visited
+  (setq magit-diff-refine-hunk nil)
+  (setq magit-commit-show-diff nil
+        magit-revision-insert-related-refs nil)
+
+  ;; measured section costs, all small multiples of 280ms:
+  ;;   tags-header 0.53 (git describe --tags), diff-filter-header 0.53, stashes 1.05
+  ;; the big one left is unpushed-to-upstream-or-recent at 1.6-2.1s. keeping it,
+  ;; "Recent commits" is why you open status at all -- but that's the ~2s to cut
+  ;; if you want status under 4s.
+  (remove-hook 'magit-status-headers-hook #'magit-insert-tags-header)
+  (remove-hook 'magit-status-headers-hook #'magit-insert-diff-filter-header)
+  (remove-hook 'magit-status-sections-hook #'magit-insert-stashes)
+
+  ;; 0ms in a repo with no pushremote, 280ms each in one that has it
+  (dolist (section '(magit-insert-unpushed-to-pushremote
+                     magit-insert-unpulled-from-pushremote
+                     magit-insert-unpulled-from-upstream))
+    (remove-hook 'magit-status-sections-hook section)))
 #+end_src
 
 * Lang

@@ -16,7 +16,9 @@
 
 ;; debug our lazy loading!
 (setq use-package-always-defer 't)
-(setq use-package-compute-statistics 't)
+;; Instrumentation for `M-x use-package-report'. It wraps every use-package form
+;; to time it, so leave it off unless actively measuring startup.
+;; (setq use-package-compute-statistics 't)
 
 (doom! :input
        ;;chinese
