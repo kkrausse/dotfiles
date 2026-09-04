@@ -1,4 +1,9 @@
 cursor-style = block
+theme = Monokai Remastered
+# Monokai Remastered makes red and magenta identical and duplicates its bright
+# palette. Keep magenta distinct under deuteranopia/protanopia simulation.
+palette = 5=#ff6ac1
+palette = 13=#ff9ad4
 # shell-integration-features = no-cursor
 font-family = TX-02
 font-size = 14
@@ -17,6 +22,7 @@ copy-on-select = clipboard
 scroll-to-bottom = no-keystroke,no-output
 mouse-shift-capture = never
 keybind = shift+enter=text:\x1b\r
+keybind = super+v=paste_from_clipboard
 clipboard-write = allow
 
 
