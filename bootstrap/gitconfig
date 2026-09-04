@@ -1,0 +1,9 @@
+# Machine-local ~/.gitconfig. Edit the identity and repository path.
+[user]
+	# name = Your Name
+	# email = you@example.com
+
+[include]
+	path = ~/Documents/repos/kkrausse/dotfiles/gitconfig
+
+# Signing, credentials, and machine-local overrides go here.

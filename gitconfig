@@ -1,8 +1,5 @@
-[user]
-	# email = kkrausse@ucdavis.edu
-	# name = kkrausse
-	email = kevin.krausse@taxbit.com
-	name = kevin.krausse
+# Shared Git settings only. Identity, signing, credentials, and machine-local
+# overrides belong in the real ~/.gitconfig; see bootstrap/gitconfig.
 [diff "sopsdiffer"]
 	textconv = sops -d
 [alias]

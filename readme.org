@@ -1,170 +1,121 @@
 * dotfiles
 
-** assumed setup
-- emacs with doom and doom.d configs symlinked here
+Shared configuration for Zsh, Git, tmux, Ghostty, Vim, Doom Emacs, and Clojure
+tools.
 
-** updating new computer
-copy over zsh history
+** Configuration model
 
-fudgeups:
-- commands for symlinks
-- cat dotfiles/zshrc >> ~/.zshrc
-- install doom!
+Files in this repository are shared configuration fragments. Each machine has
+real local configuration files under =~= which import the shared fragments and
+then add machine-specific settings. Do not symlink the live configuration files
+to this repository.
 
-to install
+This separation keeps paths, identities, credentials, work configuration, and
+temporary experiments out of the shared Git worktree. It also means editing a
+local override does not dirty this repository.
 
-- shell
-  - zsh
-    - `sudo apt install zsh`
-  - fzf: `sudo apt install fzf` or `brew install fzf`
-  - to get ^r to work:
-     =git clone https://github.com/joshskidmore/zsh-fzf-history-search.git ~/.zsh/plugins/zsh-fzf-history-search=
-- emacs
-  - ubuntu:
-    #+begin_src sh
-sudo snap install emacs --classic
-sudo apt install cmake libtool autoconf automake # to compile stuff
-sudo apt-get install libtool-bin # to actually have an exec
-sudo apt install ripgrep # for doom
-sudo apt install xclip # for clipboard stuff
-    #+end_src
-  - mac:
-  =brew tap d12frosted/emacs-plus=
-  =brew install emacs-plus@28 --with-native-comp --with-ctags --with-xwidgets=
-  https://github.com/d12frosted/homebrew-emacs-plus#install
-  - doom (symlink doom.d first!) https://github.com/doomemacs/doomemacs#install
-    - PROBLEM: texinfo is old, so maybe do this? =brew ln texinfo --force=
-- worknotes https://github.com/kkrausse/worknotes
-- sdkman https://sdkman.io/install
-- clojure =brew install clojure/tools/clojure=
-  #+begin_src bash
-  keytool -import -alias netskope -keystore ~/.sdkman/candidates/java/17.0.5-zulu/zulu-17.jdk/Contents/Home/lib/security/cacerts -file /Library/netskope-cert-bundle.pem
-  #+end_src
+The copy-once entry points are in =bootstrap/=. Their repository paths are
+examples; edit them if the checkout lives somewhere else on a machine.
 
-symlinks (run from project root)
+** Set up a machine
 
-#+begin_src bash
+Clone the repository, then copy—not symlink—the entry points. These commands
+are for a new machine with no existing files. =cp= follows symlinks, so never
+copy a bootstrap file over one of the old links: first move or unlink the link,
+then copy the entry point. Never overwrite an existing real local file; merge
+its machine-specific contents into the bootstrap file instead.
 
-# for emacs c source file
-git clone --branch emacs-28.2 --depth 1 https://github.com/emacs-mirror/emacs doom.d/repos/emacs
-
-cd dotfiles
-ln -s $(pwd)/doom.d/ ~/.doom.d
-ln -s $(pwd)/vimrc ~/.vimrc
-# nah this is dumb ln -s $(pwd)/zshrc ~/.zshrc
-
-ln -s $(pwd)/gitconfig ~/.gitconfig
-# clojure specific
-ln -s $(pwd)/lsp ~/.lsp
-ln -s $(pwd)/clj-kondo ~/.clj-kondo
-ln -s $(pwd)/clojure ~/.clojure
-# idk if even needed
-ln -s $(pwd)/bin ~/.bin
-#+end_src
-
-vim vinegar
-
-#+begin_src bash
-mkdir -p ~/.vim/pack/tpope/start/vim-vinegar/
-git clone https://github.com/tpope/vim-vinegar.git ~/.vim/pack/tpope/start/vim-vinegar/
-#+end_src
-
-
-install nvm to get node.
-
-need cmake for vterm in emacs:
-
-#+begin_src bash
-# for cmake and libtools for vterm
-brew install cmake libvterm
-# clojure
-# make sure you install sdkman and get a java version you like
-brew install clojure/tools/clojure
-#+end_src
-
-
-
-I found this interesting in my `.zshrc.pre-oh-my-zsh`
-
-#+begin_src bash
-export PATH=$HOME/bin:$PATH
-export PATH=~/bin/just-v0.8.3-x86_64-apple-darwin:$PATH
-export JAVA_HOME=$(/usr/libexec/java_home)
-
-# bash completion stuff
-[[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]] && . "/usr/local/etc/profile.d/bash_completion.sh"
-
-# kubectl use-context shortcut with autocomplete
-kuc() {
-  if [ $# -ne 1 ]; then
-    echo "Usage: kuc CONTEXT"
-  else
-    kubectl config use-context $1
-  fi
-}
-_kuc() {
-    local cur=${COMP_WORDS[COMP_CWORD]}
-    COMPREPLY=( $(compgen -W "data-services.us-west-2a pro-apps.us-west-2a pro-apps.us-west-2b pro-apps.eu-central-1b pro-apps.eu-central-1c pro-apps.ap-southeast-1b.prod.pages pro-apps.ap-southeast-1c.prod.pages consumer-apps.us-west-2a consumer-apps.us-west-2b" -- $cur) )
-}
-
-complete -F _kuc kuc
-#+end_src
-
-* mac setup
-
-** access to git / github to clone this
-  - install mac dev tools
-** vim
-# vim vinegar
-mkdir -p ~/.vim/pack/tpope/start/vim-vinegar/
-git clone https://github.com/tpope/vim-vinegar.git ~/.vim/pack/tpope/start/vim-vinegar/
-
-cd dotfiles
-ln -s $(pwd)/doom.d/ ~/.doom.d
-ln -s $(pwd)/vimrc ~/.vimrc
-
-- install homebrew
-- install https://github.com/ohmyzsh/ohmyzsh/
-  - =git clone https://github.com/joshskidmore/zsh-fzf-history-search.git ~/.zsh/plugins/zsh-fzf-history-search=
-  - requires =brew install fzf=
-  - =echo "source $(pwd)/zshrc" >> ~/.zshrc=
-** install emacs
-  
-  see https://github.com/d12frosted/homebrew-emacs-plus#install
-
-  =brew tap d12frosted/emacs-plus=
-  =brew install emacs-plus@30 --with-ctags --with-xwidgets=
-note, default native comp
-
-doom
-  - doom (symlink doom.d first!) https://github.com/doomemacs/doomemacs#install
-    - =ln -s $(pwd)/doom.d/ ~/.doom.d=
-    - PROBLEM: texinfo is old, so maybe do this? =brew ln texinfo --force=
-
-
-old shsh
 #+begin_src sh
+DOTFILES="$HOME/Documents/repos/kkrausse/dotfiles"
 
-# for emacs c source file
-git clone --branch emacs-28.2 --depth 1 https://github.com/emacs-mirror/emacs doom.d/repos/emacs
+cp "$DOTFILES/bootstrap/zshrc" "$HOME/.zshrc"
+cp "$DOTFILES/bootstrap/gitconfig" "$HOME/.gitconfig"
+cp "$DOTFILES/bootstrap/tmux.conf" "$HOME/.tmux.conf"
+cp "$DOTFILES/bootstrap/vimrc" "$HOME/.vimrc"
 
-# vim vinegar
-mkdir -p ~/.vim/pack/tpope/start/vim-vinegar/
-git clone https://github.com/tpope/vim-vinegar.git ~/.vim/pack/tpope/start/vim-vinegar/
+mkdir -p "$HOME/.config/ghostty"
+cp "$DOTFILES/bootstrap/ghostty_config" "$HOME/.config/ghostty/config"
 
-
-cd dotfiles
-ln -s $(pwd)/doom.d/ ~/.doom.d
-ln -s $(pwd)/vimrc ~/.vimrc
-
-# nah this is dumb ln -s $(pwd)/zshrc ~/.zshrc -- instead:
-echo "source $(pwd)/zshrc" >> ~/.zshrc
-
-ln -s $(pwd)/gitconfig ~/.gitconfig
-# clojure specific
-ln -s $(pwd)/lsp ~/.lsp
-ln -s $(pwd)/clj-kondo ~/.clj-kondo
-ln -s $(pwd)/clojure ~/.clojure
-# idk if even needed
-ln -s $(pwd)/bin ~/.bin
+mkdir -p "$HOME/.doom.d"
+cp "$DOTFILES/bootstrap/doom.d/"*.el "$HOME/.doom.d/"
 #+end_src
+
+Review every copied file before starting the applications. In particular:
+
+- Set the correct name and email in =~/.gitconfig=.
+- Set the checkout path in the import statements.
+- Put private and host-specific shell configuration after the shared Zsh
+  source line.
+- Put host-specific Emacs paths in =~/.doom.d/machine-specific.el=.
+
+The local files load shared settings first, so settings placed after an import
+normally act as machine-local overrides.
+
+For a machine using this repository's old symlink layout, inspect and run
+=bootstrap/migrate-symlinks.sh=. It refuses to overwrite real files and keeps
+each replaced link with a =.pre-import-symlink= suffix.
+
+*** Zsh
+
+=~/.zshrc= sources the repository's =zshrc=. Keep credentials, work aliases,
+and host-specific environment variables in the local file.
+
+The shared history search bindings need =fzf= and:
+
+#+begin_src sh
+git clone https://github.com/joshskidmore/zsh-fzf-history-search.git \
+  "$HOME/.zsh/plugins/zsh-fzf-history-search"
+#+end_src
+
+*** Git
+
+=~/.gitconfig= owns identity, signing, credentials, and local overrides. Its
+=[include]= section imports the repository's =gitconfig=.
+
+*** tmux, Ghostty, and Vim
+
+Their real local files use each application's native import command:
+
+- tmux: =source-file /path/to/dotfiles/tmux.conf=
+- Ghostty: =config-file=/path/to/dotfiles/ghostty_config=
+- Vim: =source /path/to/dotfiles/vimrc=
+
+*** Doom Emacs
+
+=~/.doom.d= is a real directory. Its small =init.el=, =packages.el=, and
+=config.el= wrappers load their shared counterparts from =doom.d/=. The local
+=dotfiles.el= stores the checkout path in one place. =machine-specific.el= and
+the Custom-generated =custom.el= remain local.
+
+Run =doom sync= after first setup and whenever shared =init.el= or =packages.el=
+changes.
+
+The shared literate configuration is =doom.d/orgconfig.org=. Generated
+=orgconfig.el= should not be committed.
+
+** Clojure tools
+
+The repository also contains shared Clojure CLI, clj-kondo, and clojure-lsp
+configuration. These tools do not all provide an equivalent native include
+mechanism. Prefer a real local config and copy the shared baseline when an
+import is unavailable; do not symlink an entire local configuration directory.
+
+** Useful dependencies
+
+On macOS:
+
+#+begin_src sh
+brew install fzf ripgrep cmake libvterm clojure/tools/clojure
+brew tap d12frosted/emacs-plus
+brew install emacs-plus@30 --with-ctags --with-xwidgets
+#+end_src
+
+For Vim vinegar:
+
+#+begin_src sh
+mkdir -p "$HOME/.vim/pack/tpope/start/vim-vinegar"
+git clone https://github.com/tpope/vim-vinegar.git \
+  "$HOME/.vim/pack/tpope/start/vim-vinegar"
+#+end_src
+
+Worknotes live separately at https://github.com/kkrausse/worknotes.

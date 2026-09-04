@@ -12,7 +12,17 @@
 ;; font string. You generally only need these two:
 ;; (setq doom-font (font-spec :family "monospace" :size 12 :weight 'semi-light)
 ;;       doom-variable-pitch-font (font-spec :family "sans" :size 13))
-(org-babel-load-file "~/.doom.d/orgconfig.org")
+;; This file may be loaded by a small, machine-local ~/.doom.d/config.el.
+;; Resolve shared files relative to this file instead of assuming ~/.doom.d is
+;; a symlink to the repository.
+(defvar kev/dotfiles-doom-dir
+  (file-name-directory (file-truename (or load-file-name buffer-file-name)))
+  "Directory containing the shared Doom configuration.")
+
+(add-to-list 'custom-theme-load-path
+             (expand-file-name "themes" kev/dotfiles-doom-dir))
+(org-babel-load-file
+ (expand-file-name "orgconfig.org" kev/dotfiles-doom-dir))
 
 ;; idk wtf this does
 ;; (dolist (hook '(emacs-lisp-mode-hook ielm-mode-hook))

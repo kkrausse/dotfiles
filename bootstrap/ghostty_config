@@ -1,0 +1,5 @@
+# Machine-local ~/.config/ghostty/config. Edit the repository path for the
+# machine. Settings below this line override the shared configuration.
+config-file = ~/Documents/repos/kkrausse/dotfiles/ghostty_config
+
+# Machine-local overrides go here.

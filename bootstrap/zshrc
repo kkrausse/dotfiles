@@ -1,0 +1,5 @@
+# Machine-local ~/.zshrc. Edit this path for the machine, then add local
+# environment, credentials, and overrides below it.
+source "$HOME/Documents/repos/kkrausse/dotfiles/zshrc"
+
+# Machine-local settings go here.

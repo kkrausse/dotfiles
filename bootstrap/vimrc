@@ -1,0 +1,4 @@
+" Machine-local ~/.vimrc. Edit the repository path for the machine.
+source ~/Documents/repos/kkrausse/dotfiles/vimrc
+
+" Machine-local overrides go here.

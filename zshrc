@@ -1,4 +1,3 @@
-
 # If you come from bash you might have to change your $PATH.
 export PATH="$HOME/bin:/usr/local/bin:$PATH"
 
@@ -17,7 +16,8 @@ HISTFILE=$HOME/.zsh_history
 
 ## fzf history plugin
 export ZSH_FZF_HISTORY_SEARCH_EVENT_NUMBERS=0
-export ZSH_FZF_HISTORY_SEARCH_DATES_IN_SEARCH=1
+# had to turn this off bc ghostty doesn't like it?
+export ZSH_FZF_HISTORY_SEARCH_DATES_IN_SEARCH=0
 export ZSH_FZF_HISTORY_SEARCH_REMOVE_DUPLICATES=1
 export ZSH_FZF_HISTORY_SEARCH_BIND='^r'
 source ~/.zsh/plugins/zsh-fzf-history-search/zsh-fzf-history-search.plugin.zsh

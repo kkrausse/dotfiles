@@ -13,7 +13,9 @@ notes:
 
 #+begin_src elisp
 ;; -*- lexical-binding: t; -*-
-(load "~/.doom.d/machine-specific.el")
+;; Machine-local settings live beside the local Doom entry points, not in this
+;; public/shared repository.  It is fine for the file not to exist.
+(load (expand-file-name "machine-specific.el" doom-user-dir) t)
 
 (defmacro kev/comment (&rest args)
   nil)
@@ -32,7 +34,8 @@ notes:
 
 ;; c source directory
 ;; `git clone --branch emacs-28.2 --depth 1 https://github.com/emacs-mirror/emacs repos/emacs`
-(setq find-function-C-source-directory "~/.doom.d/repos/emacs/src")
+(setq find-function-C-source-directory
+      (expand-file-name "repos/emacs/src" kev/dotfiles-doom-dir))
 
 
 
@@ -130,6 +133,14 @@ doom-modeline package for [[https://github.com/seagle0128/doom-modeline][dopenes
         doom-modeline-height 1)
 
   (column-number-mode 1)
+  (setq doom-modeline-bar-width 1)  ; Thin bar
+(setq doom-modeline-hud nil)  ; Disable HUD indicator
+(setq doom-modeline-icon nil)  ; Disable icons in terminal - they cause rendering issues
+
+;; Or if you're on newer doom-modeline:
+(setq doom-modeline-enable-word-count nil)
+(setq doom-modeline-buffer-encoding nil)
+(setq doom-modeline-indent-info nil)
   ;; compare to https://github.com/seagle0128/doom-modeline/blob/e521d32c2d670dc664424857e3fc18a37f0728f6/doom-modeline.el#L90
   ;; also, look through
 
@@ -545,7 +556,8 @@ in `input' to get back edits made by the model"
 #+begin_src elisp
 ;; Load ob-duckdb from external file
 (with-eval-after-load 'ob
-  (load-file (expand-file-name "local-packages/ob-duckdb-local.el" doom-user-dir))
+  (load-file (expand-file-name "local-packages/ob-duckdb-local.el"
+                               kev/dotfiles-doom-dir))
   (add-to-list 'org-babel-load-languages '(duckdb . t)))
 
 ;; Configure syntax highlighting for duckdb blocks as SQL
@@ -1497,7 +1509,7 @@ org-roam setup and shortcuts
 *** general setup
 #+begin_src elisp
 (defun kev-set-visual-columns ()
-  (visual-line-mode 1)
+  ;; (visual-line-mode 1)
   (visual-fill-column-mode 1)
   (after! visual-fill-column
     (setq visual-fill-column-width 80
@@ -2006,23 +2018,6 @@ cider configs
   (setq cider-inject-dependencies-at-jack-in t)
 )
 
-  ;; NOTE: instead set cider-jack-in-cmd with .dir-locals.el !!!
-  ;; see how ppl do it:
-  ;; https://github.com/djblue/portal/blob/48bda9b9b59795802a18f301d982b1f41d0db3c6/.dir-locals.el#L1
-  ;;
-
-  ;; (define-advice cider-jack-in-params (:around (orig-fun project-type) jack-in-param-advice)
-  ;;   (pcase project-type
-  ;;     ('clojure-cli (ivy-read "clojure cli params: "
-  ;;                             kev-clojure-cli-param-hist
-  ;;                             :history 'kev-clojure-cli-param-hist))
-  ;;     (_ (funcall orig-fun project-type))))
-;; (define-advice cider-inject-jack-in-dependencies (:around (orig-fun global-opts params project-type &optional command)
-;;                                                           inject-deps-advice)
-;;   (pcase project-type
-;;     ('clojure-cli params)
-;;     (_ (funcall orig-fun global-opts params project-type command))))
-
 ;; cider window popup!
 ;;
 ;; use display-buffer-alist to fix what we do!
@@ -2047,6 +2042,20 @@ cider configs
 for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#indentation-of-macro-forms][clojure mode docs]] and at [[https://docs.cider.mx/cider/indent_spec.html][cider docs]]
 
 #+begin_src elisp
+
+;; note this doesn't do shit.
+;; bc doom binds over it -- gotta do spc c l to hit lsp map
+
+;; (use-package! lsp-mode
+;;   :init
+;;   (setq lsp-keymap-prefix "SPC l")
+;;   )
+;; only done once, not every buffer
+(after! lsp-mode
+  ;; (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]public\\'" "")
+  (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]\\tmp\\'")
+  )
+
 (add-hook! 'lsp-mode-hook
 
            (lsp-ui-mode 1)
@@ -2058,29 +2067,35 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
                  "gb" #'xref-go-back
                  "gf" #'xref-go-forward
                  "d" #'lsp-ui-doc-glance)
-           (map! "s-l" lsp-command-map)
+           ;; don't trust this?
+           (map!
+            :nv "SPC l" lsp-command-map)
 
            (lsp-diagnostics-mode 0)
 
            ;; TODO
            ;; look at lsp--default-directory-for-connection
            ;; how to lsp thing is set up and where it gets the config
-           (setq lsp-ui-doc-position 'at-point
-                 lsp-enable-symbol-highlighting 't
-                 ;; perf stuff
-                 lsp-file-watch-threshold 10000
-                 gc-cons-threshold (* 100 1024 1024)
-                 read-prcess-output-max (* 1024 1024)
-                 lsp-ui-doc-enable nil
-                 lsp-ui-doc-position 'at-point
-                 lsp-headerline-breadcrumb-enable nil
-                 lsp-ui-sideline-enable nil
-                 lsp-ui-sideline-show-code-actions nil
-                 lsp-modeline-diagnostics-enable nil
+           (setq
+            ;; idk
+            ;; lsp-ui-doc-position 'at-point
+            ;;      lsp-enable-symbol-highlighting 't
+            ;;      ;; perf stuff
+            ;;      lsp-file-watch-threshold 10000
+            ;;      gc-cons-threshold (* 100 1024 1024)
+            ;;      read-prcess-output-max (* 1024 1024)
+            ;;      lsp-ui-doc-enable nil
+            ;;      lsp-ui-doc-position 'at-point
+            ;;      lsp-headerline-breadcrumb-enable nil
+            ;;      lsp-ui-sideline-enable nil
+            ;;      lsp-ui-sideline-show-code-actions nil
+            ;;      lsp-modeline-diagnostics-enable nil
 
                  ;; focus help window when it shows up
                  help-window-select t
 
+                 ;; allow multi line eldoc
+                 lsp-eldoc-render-all t
                  ;; change to locally do clojure lsp
                  lsp-clojure-custom-server-command '("zsh" "-c" "clojure-lsp")
 
@@ -2114,11 +2129,6 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
 ;; (add-hook! lsp-mode
 ;;   (turn-on-better-jumper-mode))
 
-;; only done once, not every buffer
-(after! lsp-mode
-  (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]public\\'" "")
-  (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]\\tmp\\'")
-  )
 
 
 ;; makes so aggressive indent won't go until you exit insert mode
