@@ -12,9 +12,9 @@
 ;; font string. You generally only need these two:
 ;; (setq doom-font (font-spec :family "monospace" :size 12 :weight 'semi-light)
 ;;       doom-variable-pitch-font (font-spec :family "sans" :size 13))
-;; This file may be loaded by a small, machine-local ~/.doom.d/config.el.
-;; Resolve shared files relative to this file instead of assuming ~/.doom.d is
-;; a symlink to the repository.
+;; This file is loaded by a small, machine-local ~/.doom.d/config.el wrapper.
+;; Resolve shared files relative to this file instead of assuming anything
+;; about the location of the local ~/.doom.d directory.
 (defvar kev/dotfiles-doom-dir
   (file-name-directory (file-truename (or load-file-name buffer-file-name)))
   "Directory containing the shared Doom configuration.")
@@ -34,10 +34,6 @@
   (interactive)
   (mapc (lambda (mode) (print mode))
    (doom-active-minor-modes)))
-
-(defun kevin-eval-nrepl2 ()
-  (interactive)
-  (eval-js-file "/Users/kkrausse/dotfiles/doom.d/kevin/nrepl2.js"))
 
 (defun doom-edit-config ()
   (interactive)

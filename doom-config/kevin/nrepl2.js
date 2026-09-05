@@ -1,7 +1,7 @@
 import { Client , Packet } from "https://deno.land/x/tcp_socket@0.0.2/mods.ts"
 import { assert } from "https://deno.land/std@0.90.0/testing/asserts.ts"
 import * as datetime from 'https://deno.land/std@0.90.0/datetime/mod.ts'
-import * as bencode from "/Users/kkrausse/dotfiles/doom.d/kevin/deno-bencode/mod.ts"
+import * as bencode from "/Users/kkrausse/Documents/repos/kkrausse/dotfiles/doom-config/kevin/deno-bencode/mod.ts"
 
 // function relative(p) {
 //     let path =  lisp.buffer_file_name().split('/');

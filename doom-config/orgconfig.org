@@ -13,9 +13,6 @@ notes:
 
 #+begin_src elisp
 ;; -*- lexical-binding: t; -*-
-;; Machine-local settings live beside the local Doom entry points, not in this
-;; public/shared repository.  It is fine for the file not to exist.
-(load (expand-file-name "machine-specific.el" doom-user-dir) t)
 
 ;; autostart server for emacsclient
 (unless (server-running-p) (server-start))
@@ -792,8 +789,7 @@ If no such vterm buffer exists, print a message and return nil."
            :nv "a" #'kev/copy-absolute-file-and-lines)
           (:prefix ("e" . "edit")
                    :n "e" 'edit-env-file
-                   :n "c" 'doom-edit-config
-                   :n "t" '(lambda () (interactive) (find-file "~/dotfiles/tmp.org")))))
+                   :n "c" 'doom-edit-config)))
 
 
 ;; (-> 'display-buffer-alist
@@ -2226,7 +2222,9 @@ Wraps the fragment in a standard github-markdown-css shell."
   - company backend (lsp seems completely disabled for this?)
   - eldoc stuffs they definitely compete
 - [ ] company mode backend for text completion?
-- [ ] move machine-specific setup into separate file so they don't have to keep changing
+- [X] move machine-specific setup into separate file so they don't have to keep changing
+  - decided opposite 2026-09: machine-local settings go after the shared loads
+    in =~/.doom.d/config.el=; no separate machine-specific.el
 - [ ] clojure errors go to popwin
 - [ ] keybindings
   - terminal

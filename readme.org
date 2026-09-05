@@ -46,7 +46,7 @@ Review every copied file before starting the applications. In particular:
 - Set the checkout path in the import statements.
 - Put private and host-specific shell configuration after the shared Zsh
   source line.
-- Put host-specific Emacs paths in =~/.doom.d/machine-specific.el=.
+- Put host-specific Emacs settings after the shared loads in =~/.doom.d/config.el=.
 
 The local files load shared settings first, so settings placed after an import
 normally act as machine-local overrides.
@@ -83,14 +83,15 @@ Their real local files use each application's native import command:
 *** Doom Emacs
 
 =~/.doom.d= is a real directory. Its small =init.el=, =packages.el=, and
-=config.el= wrappers load their shared counterparts from =doom.d/=. The local
-=dotfiles.el= stores the checkout path in one place. =machine-specific.el= and
-the Custom-generated =custom.el= remain local.
+=config.el= wrappers load their shared counterparts from =doom-config/=. The
+local =dotfiles.el= stores the checkout path in one place, =custom.el= remains
+local, and machine-specific settings go after the shared loads in the local
+=config.el=.
 
 Run =doom sync= after first setup and whenever shared =init.el= or =packages.el=
 changes.
 
-The shared literate configuration is =doom.d/orgconfig.org=. Generated
+The shared literate configuration is =doom-config/orgconfig.org=. Generated
 =orgconfig.el= should not be committed.
 
 ** Clojure tools

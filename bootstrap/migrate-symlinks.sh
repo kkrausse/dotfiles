@@ -64,11 +64,8 @@ if [ -L "$doom_dir" ]; then
   mkdir -p "$doom_dir"
   cp "$repo_root/bootstrap/doom.d/"*.el "$doom_dir/"
   # Older checkouts tracked these local files. Preserve them when present.
-  if [ -f "$repo_root/doom.d/custom.el" ]; then
-    cp "$repo_root/doom.d/custom.el" "$doom_dir/custom.el"
-  fi
-  if [ -f "$repo_root/doom.d/machine-specific.el" ]; then
-    cp "$repo_root/doom.d/machine-specific.el" "$doom_dir/machine-specific.el"
+  if [ -f "$repo_root/doom-config/custom.el" ]; then
+    cp "$repo_root/doom-config/custom.el" "$doom_dir/custom.el"
   fi
   echo "Installed real Doom directory: $doom_dir"
 elif [ -e "$doom_dir" ]; then
