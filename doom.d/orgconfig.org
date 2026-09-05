@@ -2204,6 +2204,7 @@ Wraps the fragment in a standard github-markdown-css shell."
               "<style>.markdown-body{max-width:980px;margin:2rem auto;padding:0 2rem}</style>"
               "</head><body><article class=\"markdown-body\">")
       (insert-file-contents body)
+      (goto-char (point-max))
       (insert "</article></body></html>"))
     (browse-url-of-file out)))
 
