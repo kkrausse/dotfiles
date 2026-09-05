@@ -2187,14 +2187,24 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
 #+begin_src elisp
 (defun kev/markdown-preview-marked ()
   "Render current buffer with `marked` to temp HTML and open in browser.
-Same renderer as the opencode markdown preview workflow."
+Wraps the fragment in a standard github-markdown-css shell."
   (interactive)
   (unless buffer-file-name (user-error "Buffer has no file"))
   (save-buffer)
-  (let ((out (expand-file-name "preview.html" (make-temp-file "md-preview-" t))))
+  (let* ((dir (make-temp-file "md-preview-" t))
+         (body (expand-file-name "body.html" dir))
+         (out (expand-file-name "preview.html" dir)))
     (unless (zerop (call-process "bunx" nil nil nil
-                                 "marked" "-i" buffer-file-name "-o" out))
+                                 "marked" "-i" buffer-file-name "-o" body))
       (user-error "bunx marked failed"))
+    (with-temp-file out
+      (insert "<!doctype html><html><head><meta charset=\"utf-8\">"
+              "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+              "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown.min.css\">"
+              "<style>.markdown-body{max-width:980px;margin:2rem auto;padding:0 2rem}</style>"
+              "</head><body><article class=\"markdown-body\">")
+      (insert-file-contents body)
+      (insert "</article></body></html>"))
     (browse-url-of-file out)))
 
 (after! markdown-mode
