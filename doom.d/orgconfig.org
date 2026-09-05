@@ -2201,9 +2201,13 @@ Wraps the fragment in a standard github-markdown-css shell."
       (insert "<!doctype html><html><head><meta charset=\"utf-8\">"
               "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
               "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown.min.css\">"
-              "<style>body{margin:0;background:#fff}"
-              ".markdown-body{max-width:980px;margin:0 auto;padding:2rem;box-sizing:border-box}"
-              "@media (prefers-color-scheme:dark){body{background:#0d1117}}</style>"
+              "<meta name=\"color-scheme\" content=\"light dark\">"
+              "<style>body{margin:0;background:#fff;color:#1f2328}"
+              ".markdown-body{max-width:980px;margin:0 auto;padding:2rem;box-sizing:border-box;color:#1f2328}"
+              "@media (prefers-color-scheme:dark){body{background:#0d1117;color:#e6edf3}"
+              ".markdown-body{color:#e6edf3}"
+              ".markdown-body table tr{background-color:#0d1117}"
+              ".markdown-body table tr:nth-child(2n){background-color:#151b23}}</style>"
               "</head><body><article class=\"markdown-body\">")
       (insert-file-contents body)
       (goto-char (point-max))
