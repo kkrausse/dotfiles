@@ -17,6 +17,9 @@ notes:
 ;; public/shared repository.  It is fine for the file not to exist.
 (load (expand-file-name "machine-specific.el" doom-user-dir) t)
 
+;; autostart server for emacsclient
+(unless (server-running-p) (server-start))
+
 (defmacro kev/comment (&rest args)
   nil)
 
