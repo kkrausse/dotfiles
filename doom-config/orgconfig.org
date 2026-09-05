@@ -15,6 +15,7 @@ notes:
 ;; -*- lexical-binding: t; -*-
 
 ;; autostart server for emacsclient
+(require 'server)
 (unless (server-running-p) (server-start))
 
 (defmacro kev/comment (&rest args)
