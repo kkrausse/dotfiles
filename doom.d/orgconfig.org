@@ -2180,6 +2180,24 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.cue\\'" . cue-mode))
 #+end_src
+** markdown
+#+begin_src elisp
+(defun kev/markdown-preview-marked ()
+  "Render current buffer with `marked` to temp HTML and open in browser.
+Same renderer as the opencode markdown preview workflow."
+  (interactive)
+  (unless buffer-file-name (user-error "Buffer has no file"))
+  (save-buffer)
+  (let ((out (expand-file-name "preview.html" (make-temp-file "md-preview-" t))))
+    (unless (zerop (call-process "bunx" nil nil nil
+                                 "marked" "-i" buffer-file-name "-o" out))
+      (user-error "bunx marked failed"))
+    (browse-url-of-file out)))
+
+(after! markdown-mode
+  (map! :map markdown-mode-map :localleader :n "p" #'kev/markdown-preview-marked)
+  (map! :map gfm-mode-map :localleader :n "p" #'kev/markdown-preview-marked))
+#+end_src
 
 * TODO
 - [ ] projectile terminal (gets or creates terminal at root of current project)
