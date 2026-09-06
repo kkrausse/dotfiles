@@ -930,8 +930,8 @@ line numbers
 ;;       (run-with-idle-timer 1 t (lambda () (setq kevin-project-root (projectile-project-root)))))
 (setq kev-cached-project-root (timed-cached-funcall 1.0 projectile-project-name))
 
-(setq frame-title-format '((:eval
-                            (funcall kev-cached-project-root))))
+(setq frame-title-format "Emacs"
+      icon-title-format "Emacs")
 
 ;; noticed bad perf here
 (setq kev-cached-modeline-buffer-file-state
