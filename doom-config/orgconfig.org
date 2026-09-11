@@ -832,7 +832,8 @@ If no such vterm buffer exists, print a message and return nil."
 ** Dired
 #+begin_src elisp
 ;; Show the most recently modified entries first.
-(setq dired-listing-switches "-ahl -v -t --group-directories-first")
+(after! dired
+  (setq dired-listing-switches "-ahl -v -t --group-directories-first"))
 #+end_src
 
 ** Keybindings
