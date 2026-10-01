@@ -38,6 +38,10 @@ cp "$DOTFILES/bootstrap/ghostty_config" "$HOME/.config/ghostty/config"
 
 mkdir -p "$HOME/.doom.d"
 cp "$DOTFILES/bootstrap/doom.d/"*.el "$HOME/.doom.d/"
+
+mkdir -p "$HOME/.claude" "$HOME/.config/opencode"
+cp "$DOTFILES/bootstrap/claude_md" "$HOME/.claude/CLAUDE.md"
+cp "$DOTFILES/bootstrap/opencode_agents_md" "$HOME/.config/opencode/AGENTS.md"
 #+end_src
 
 Review every copied file before starting the applications. In particular:
@@ -79,6 +83,26 @@ Their real local files use each application's native import command:
 - tmux: =source-file /path/to/dotfiles/tmux.conf=
 - Ghostty: =config-file=/path/to/dotfiles/ghostty_config=
 - Vim: =source /path/to/dotfiles/vimrc=
+
+*** Coding agents
+
+=agent-instructions.md= holds the global instructions shared by Claude Code and
+opencode. It is deliberately not named =AGENTS.md= or =CLAUDE.md=, so agents
+working in this repository do not also load it as project instructions.
+
+- Claude Code: =~/.claude/CLAUDE.md= imports it with
+  =@/path/to/dotfiles/agent-instructions.md=. Copy =bootstrap/claude_md=.
+- opencode: =~/.config/opencode/opencode.jsonc= lists it under =instructions=:
+
+  #+begin_src jsonc
+  "instructions": ["~/Documents/repos/kkrausse/dotfiles/agent-instructions.md"]
+  #+end_src
+
+  opencode does not expand =@= imports, and without a local
+  =~/.config/opencode/AGENTS.md= it falls back to reading =~/.claude/CLAUDE.md=
+  verbatim. Copy =bootstrap/opencode_agents_md= to keep a real local file there.
+
+Instructions specific to one machine or one agent go in the local files.
 
 *** Doom Emacs
 

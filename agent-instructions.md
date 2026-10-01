@@ -1,0 +1,14 @@
+- commit after any change unless otherwise specified
+- Use Browser Control through the Bun-backed `browser-control` CLI. Never suggest, configure, or use its MCP server, even if upstream documentation offers it. Only change this if the user explicitly requests it.
+  - commit messages can be pretty long / descriptive if it helps explain motivation provides good context (but sometimes code change explains itself so this might not be needed).
+- use these tech stack things for random projects
+  - bun + typescript
+  - UI: shadcn/ui with BaseUI, tailwind CSS, Lucide icons, and typically max out the base / default components
+- avoid typescript classes unless it really fits the model. just use functions and interfaces and create functions.
+- if you make a handoff or plan doc, give absolute path
+- bias towards creating a new subagent over delegating to existing one unless there's really a lot of shared context or the task is small.
+- usually keep current session more high level context / low token count, delegating to sub-agents for implementation or deep research, but still using current session for talking through higher level design stuff, so don't delegate for creating the high level design docs unless directly asked. But like use good judgement. if user request is fairly straightforward from the start, just do it bc delegation token cost would be more.
+- if using openai/gpt-6.1-sol or openai/gpt-6-astra, sub-agents should be openai/gpt-6.1-sol
+- user often uses dication, be aware of phonetically similar misspellings or miswordings.
+- When the user asks to post a file/page to their Tailscale server, use their custom script: `/Users/kkrausse/Documents/repos/kkrausse/random/scripts/deploy-artifact.sh <file-or-directory> [slug]`, then return the printed link. Private by default; add `--public` only if they explicitly want it on kkrausse.com.
+- do not write unit tests unless there is a concrete failure we are protecting against, or an external fixture like data standard we need to true up against, or we actually hit a failure or regression that the test would protect against. 
