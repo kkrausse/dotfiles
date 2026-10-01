@@ -95,8 +95,8 @@ The shared literate configuration is =doom.d/orgconfig.org=. Generated
 
 ** Clojure tools
 
-The repository also contains shared Clojure CLI, clj-kondo, and clojure-lsp
-configuration. These tools do not all provide an equivalent native include
+The repository also contains shared clj-kondo and clojure-lsp configuration and
+a Clojure =user.clj=. These tools do not all provide an equivalent native include
 mechanism. Prefer a real local config and copy the shared baseline when an
 import is unavailable; do not symlink an entire local configuration directory.
 
