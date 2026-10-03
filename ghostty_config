@@ -1,8 +1,5 @@
 cursor-style = block
 theme = Monokai Remastered
-# macOS tabs inherit the terminal background. The theme default (#0c0c0c) is
-# too close to the darker inactive-tab treatment to show the active tab clearly.
-background = #1a1a1a
 # Monokai Remastered makes red and magenta identical and duplicates its bright
 # palette. Keep magenta distinct under deuteranopia/protanopia simulation.
 palette = 5=#ff6ac1
@@ -11,7 +8,9 @@ palette = 13=#ff9ad4
 font-family = TX-02
 font-size = 14
 term=xterm-256color
-#macos-titlebar-style = tabs
+macos-titlebar-style = native
+window-theme = dark
+window-save-state = always
 #window-width = 100000
 #window-height = 100000
 window-padding-x = 1,1
