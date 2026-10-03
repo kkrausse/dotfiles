@@ -60,11 +60,6 @@
            :repo "purcell/exec-path-from-shell"
            :branch "master"))
 
-(package! ellama
-  :recipe (:host github
-           :repo "s-kostyaev/ellama"
-           :branch "main"))
-
 (package! restclient
   :recipe (:host github
            :repo "pashky/restclient.el"

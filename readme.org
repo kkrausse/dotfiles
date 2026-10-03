@@ -118,6 +118,90 @@ changes.
 The shared literate configuration is =doom-config/orgconfig.org=. Generated
 =orgconfig.el= should not be committed.
 
+**** Fresh-machine Emacs installation
+
+The known-working baseline is macOS, Emacs Plus 30.2, and Doom commit
+=5b5b170f7902e81826fd8efbec88eb38e23e2807= (2025-07-05). Doom's revision also
+determines its bundled package pins; use this revision when reproducing the
+setup rather than silently upgrading Doom. Homebrew's =emacs-plus@30= formula
+may install a newer patch release than 30.2.
+
+Install Homebrew and Git first, then:
+
+#+begin_src sh
+brew install ripgrep fd cmake libvterm
+brew tap d12frosted/emacs-plus
+brew install emacs-plus@30 --with-ctags --with-xwidgets
+
+# Only clone into a new, empty location; preserve an existing Emacs install.
+git clone https://github.com/doomemacs/doomemacs "$HOME/.config/emacs"
+git -C "$HOME/.config/emacs" checkout 5b5b170f7902e81826fd8efbec88eb38e23e2807
+#+end_src
+
+Copy the =bootstrap/doom.d= wrappers as described above, and adjust
+=~/.doom.d/dotfiles.el= to the actual dotfiles checkout. Do this before running
+=~/.config/emacs/bin/doom install=; keep the existing wrapper files if the
+installer offers to replace them. Then run:
+
+#+begin_src sh
+~/.config/emacs/bin/doom sync
+~/.config/emacs/bin/doom doctor
+#+end_src
+
+The shared config loads =themes/my-vibrant-theme.el= and includes the =grey7=
+default background preference. No local theme override or Ollama service is
+needed. Keep machine-specific paths and private settings in the local wrappers.
+=custom.el= is intentionally not copied: other interactive Customize settings,
+trusted project-local forms, and session/cache state remain local.
+
+**** Restore Worknotes and Org-roam
+
+Clone =git@github.com:kkrausse/worknotes.git= using an account with repository
+access. The example checkout location is
+=~/Documents/repos/kkrausse/worknotes=. Preserve any existing checkout and its
+uncommitted notes rather than replacing it.
+
+Add these settings after the shared loads in =~/.doom.d/config.el=, adjusting
+the paths to this machine:
+
+#+begin_src elisp
+(setq org-roam-directory
+      (expand-file-name "~/Documents/repos/kkrausse/worknotes/org-roam"))
+(setq org-directory (expand-file-name "~/org/"))
+
+(add-hook! projectile-mode
+  (add-to-list 'projectile-project-search-path '("~/Documents/" . 3)))
+#+end_src
+
+Create =~/org/= if needed. Org-roam autosync is enabled by the shared config;
+run =M-x org-roam-db-sync= to rebuild its database from the notes. Do not copy
+the old database, server sockets, package caches, or =orgconfig.el=.
+
+**** Feature-specific dependencies and checks
+
+- Doom icons: run =M-x nerd-icons-install-fonts= to install Symbols Nerd Font Mono.
+- Markdown preview (=SPC m p=): install Bun so =bunx marked= is available.
+- DuckDB REPL and Org Babel: =brew install duckdb=.
+- Clojure: install a JDK, =clojure/tools/clojure=, =babashka/brew/babashka=,
+  and =clojure-lsp/brew/clojure-lsp=; copy/merge the shared Clojure tool configs
+  described below. The shared CIDER startup advice also sources
+  =~/.sdkman/bin/sdkman-init.sh= and runs =sdk c java=: install SDKMAN and
+  select a Java candidate, or override that advice locally when using a
+  different JDK manager. Verify CIDER jack-in from a real Clojure project.
+- Other language modules need their respective runtimes and language servers;
+  follow =doom doctor= diagnostics for the languages used on that machine.
+- Bibliography support currently expects =~/Desktop/bibliography/refs.bib= and
+  =~/Desktop/bibliography/pdfs/=. Those files are not supplied by dotfiles;
+  restore them separately or override the paths locally if using this feature.
+- The custom browser-note sync commands use =https://kkrausse.com= and existing
+  note IDs in Worknotes. They require that service and the matching notes.
+
+After setup, launch GUI Emacs and verify the =my-vibrant= theme with a =grey7=
+default background, Evil/keybindings, Org-roam note lookup and daily capture,
+=M-x vterm=, and =emacsclient -e '(server-running-p)'=. The shared configuration
+starts the Emacs server automatically. Test Markdown preview and the language
+workflows you actually use; a successful =doom sync= alone is not a full check.
+
 ** Clojure tools
 
 The repository also contains shared Clojure CLI, clj-kondo, and clojure-lsp

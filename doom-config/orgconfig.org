@@ -107,6 +107,9 @@ notes:
 (load-theme 'my-vibrant t)
 (setq doom-theme 'my-vibrant)
 
+;; Shared preference, formerly stored only in ~/.doom.d/custom.el.
+(custom-theme-set-faces 'my-vibrant '(default ((t (:background "grey7")))))
+
 ;;(setq doom-theme 'doom-vibrant)
 ;; TODO:
 ;; doom-vibrant, but port over my changes to just the hook
@@ -328,19 +331,6 @@ and make multi-term use it
                                      (alist-get 'note_content))))
     (kev/replace-or-create-heading file kev/note-sync-heading pulled-content)))))
 #+end_src
-** ellama
-#+begin_src elisp
-;; NOTE will eval NOW if package already loaded
-(after! ellama
-  (setq
-   ellama-provider (make-llm-ollama
-                    :scheme "http"
-                    :host "localhost"
-                    :port 11434
-                    :chat-model "zephyr"
-                    :embedding-model "zephyr")))
-#+end_src
-
 ** gpt
 #+begin_src elisp
 
