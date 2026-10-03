@@ -28,7 +28,6 @@
 ;; this package is satan's child I swear
 ;; (package! better-jumper :disable 1)
 
-(package! dired-du)
 (package! doom-themes)
 ;; for "jj" chord binding to escape
 (package! key-chord)
@@ -52,21 +51,24 @@
 
 ;; nice partial screens for org roam
 (package! visual-fill-column
+  :pin "e391b52922086ac38397a3325933900b6d90f9f0"
   :recipe (:host nil
            :repo "https://codeberg.org/joostkremers/visual-fill-column"))
 
 (package! exec-path-from-shell
+  :pin "4896a797252fbfdac32fb77508500ac7d220f717"
   :recipe (:host github
            :repo "purcell/exec-path-from-shell"
            :branch "master"))
 
 (package! restclient
+  :pin "e2a2b13482d72634f8e49864cd9e5c907a5fe137"
   :recipe (:host github
            :repo "pashky/restclient.el"
            :branch "master"))
 
 (package! browse-at-remote
-  ;; :pin "cef26f2c063f2473af42d0e126c8613fe2f709e4"
+  :pin "76aa27dfd469fcae75ed7031bb73830831aaccbf"
   :recipe (:host github
            :repo "rmuslimov/browse-at-remote"
            :branch "master"))
@@ -78,6 +80,7 @@
 
 (package! org-roam
   ;; taken from repo
+  :pin "89dfaef38b6caa3027f20f96a551dc8f194ac533"
   :recipe (:host github :repo "org-roam/org-roam"
            :files (:defaults "extensions/*")
            ;; do this if modifying locally
@@ -102,6 +105,7 @@
 
 ;; for bibtex references
 (package! org-ref
+  :pin "a78a6c33c35e7f8a6f121a666944f7800bb73c99"
   :recipe (:type git
            :host nil
            :repo "https://github.com/jkitchin/org-ref.git" ))
@@ -142,3 +146,16 @@
 ;(unpin! pinned-package another-pinned-package)
 ;; ...Or *all* packages (NOT RECOMMENDED; will likely break things)
 ;(unpin! t)
+
+(package! sqlite3)
+
+(package! eat
+  :pin "c8d54d649872bfe7b2b9f49ae5c2addbf12d3b99"
+  :recipe (:type git
+           :host codeberg
+           :repo "akib/emacs-eat"
+           :files ("*.el" ("term" "term/*.el") "*.texi"
+                   "*.ti" ("terminfo/e" "terminfo/e/*")
+                   ("terminfo/65" "terminfo/65/*")
+                   ("integration" "integration/*")
+                   (:exclude ".dir-locals.el" "*-tests.el"))))

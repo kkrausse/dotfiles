@@ -182,6 +182,9 @@ the old database, server sockets, package caches, or =orgconfig.el=.
 - Doom icons: run =M-x nerd-icons-install-fonts= to install Symbols Nerd Font Mono.
 - Markdown preview (=SPC m p=): install Bun so =bunx marked= is available.
 - DuckDB REPL and Org Babel: =brew install duckdb=.
+- =ghostty-web-term= (a Ghostty terminal in an xwidget) and
+  =kev/markdown-preview-xwidget= need the =--with-xwidgets= build. The terminal
+  also needs Node; see =doom-config/local-packages/ghostty-web-emacs/README.md=.
 - Clojure: install a JDK, =clojure/tools/clojure=, =babashka/brew/babashka=,
   and =clojure-lsp/brew/clojure-lsp=; copy/merge the shared Clojure tool configs
   described below. The shared CIDER startup advice also sources

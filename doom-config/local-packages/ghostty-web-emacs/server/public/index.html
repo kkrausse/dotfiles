@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ghostty-web terminal</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #1a1b26;
+      }
+      #terminal {
+        position: absolute;
+        inset: 0;
+        outline: none;
+      }
+      /* Status is only for the states where the terminal itself cannot say
+         anything: booting, disconnected, failed. */
+      #status {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 10;
+        font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+        padding: 4px 10px;
+        background: #16161e;
+        color: #a9b1d6;
+        border-top: 1px solid #2a2b3d;
+        white-space: pre-wrap;
+      }
+      #status[data-state='connected'] {
+        display: none;
+      }
+      #status[data-state='error'] {
+        background: #3d1f2a;
+        color: #ff9eb1;
+      }
+      /* Two states, because there are only two: the terminal has the keyboard, or
+         Emacs does.  Shown only in the latter case. */
+      #terminal[data-focused='false']::after {
+        content: 'Emacs has the keyboard — click to type';
+        position: absolute;
+        bottom: 6px;
+        right: 8px;
+        pointer-events: none;
+        font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: #7aa2f7;
+        background: #16161e;
+        border: 1px solid #2a2b3d;
+        border-radius: 4px;
+        padding: 4px 7px;
+        opacity: 0.9;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="terminal"></div>
+    <div id="status" data-state="boot">starting…</div>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

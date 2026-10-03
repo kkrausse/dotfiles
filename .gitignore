@@ -27,3 +27,10 @@
 /.DS_Store
 /tmp/
 /tmp.org
+
+# Machine-local: corporate trust stores and ~/bin contents.
+/cacerts
+/bin/
+
+# Built on demand -- see ghostty-web-emacs/module/Makefile
+*.dylib

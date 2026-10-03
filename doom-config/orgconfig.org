@@ -574,6 +574,14 @@ in `input' to get back edits made by the model"
 #+end_src
 ** utility functions
 #+begin_src elisp
+(defun file-notify-rm-all-watches ()
+  "Remove all existing file notification watches from Emacs."
+  (interactive)
+  (maphash
+   (lambda (key _value)
+     (file-notify-rm-watch key))
+   file-notify-descriptors))
+
 (defmacro kev-setq-local (&rest kvs)
   `(progn
      ,@(mapcar
@@ -818,9 +826,39 @@ If no such vterm buffer exists, print a message and return nil."
 
 ** Dired
 #+begin_src elisp
-;; Show the most recently modified entries first.
+;; Don't leave a dired buffer behind per directory visited. Emacs 28+ builtin;
+;; only fires dir->dir and only when the buffer isn't in a second window.
+(setq dired-kill-when-opening-new-dired-buffer t)
+
+;; Names only -- no perms/owner/group/size/date. `(' toggles it per buffer; to
+;; keep a column add its index to `dired-hide-details-preserved-columns'
+;; (1 perms, 2 links, 3 owner, 4 group, 5 size, 6-7 date with long-iso below).
+;;
+;; Doom ships '(dirvish dirvish-side), and since dirvish-override-dired-mode is
+;; on, dirvish forces the mode back *off* in every plain dired buffer -- the
+;; hook below runs first and loses. Must be `after!': dirvish loads lazily, so a
+;; plain setq here gets clobbered by Doom's own :config block.
+(after! dirvish (setq dirvish-hide-details t))
+(add-hook 'dired-mode-hook #'dired-hide-details-mode)
+
+;; Date column shows creation (birth) time instead of mtime. `--time=birth'
+;; needs GNU ls: Doom points `insert-directory-program' at gls on macOS, so on a
+;; box without coreutils every listing fails with an unrecognized-option error.
+;; Doom's own `+dired-disable-gnu-ls-flags-maybe-h' drops back to plain "-ahl"
+;; over TRAMP, so remote dirs keep showing mtime. `after! dired' for the same
+;; clobbering reason as above.
+;; Sorted newest-created first: `t' sorts by whatever `--time' selects, and
+;; defaults to descending. It must come *after* `v' in the bundle -- ls takes
+;; the last sort option given, so "-ahltv" would silently sort by version.
+;; `s' still toggles name/date: dropping the t leaves -ahlv (name, natural).
 (after! dired
-  (setq dired-listing-switches "-ahl -v -t --group-directories-first"))
+  (setq dired-listing-switches
+        "-ahlvt --group-directories-first --time=birth --time-style=long-iso")
+  ;; long-iso splits the date into 2 whitespace fields, so hide-details keeps
+  ;; 6-7 visible; the default locale style is 3 fields and needs '(6 7 8).
+  ;; 5 is size, human-readable via `-h'. Free: ls already returns it, hiding is
+  ;; just an invisibility property, so no extra stat calls.
+  (setq dired-hide-details-preserved-columns '(5 6 7)))
 #+end_src
 
 ** Keybindings
@@ -835,7 +873,7 @@ If no such vterm buffer exists, print a message and return nil."
 ;; for evil-escape package
 ;; so much better than key chord!!
 (setq-default evil-escape-key-sequence "jj")
-(setq-default evil-escape-delay 0.2)
+(setq-default evil-escape-delay 0.3)
 
 #+end_src
 
@@ -851,32 +889,6 @@ If no such vterm buffer exists, print a message and return nil."
 (setq counsel-projectile-switch-project-action (lambda (project)
                                                  (dired (projectile-project-root project))))
 
-;; delete dired buffers when switching
-(define-advice dired-find-file (:around (orig-fun &rest _) dired-find-file-advice)
-  (let ((prev-buf (current-buffer)))
-    (funcall-interactively orig-fun)
-    (when (and (eq 'dired-mode (buffer-local-value 'major-mode prev-buf))
-               ;; ONLY FOR dired buffer! Leave it if we go to a file?
-               (eq 'dired-mode (buffer-local-value 'major-mode (current-buffer)))
-               ;; make sure it's not currently displayed
-               (not (seq-find (lambda (w)
-                                (eq prev-buf
-                                    (window-buffer w)))
-                              (window-list)))
-               (not (eq prev-buf (current-buffer))))
-      (kill-buffer prev-buf))))
-
-(define-advice dired-up-directory (:around (orig-fun &rest args) dired-up-advice)
-  (let ((prev-buf (current-buffer)))
-    (apply #'funcall-interactively orig-fun args)
-    (when (and (eq 'dired-mode (buffer-local-value 'major-mode prev-buf))
-               ;; make sure it's not currently displayed
-               (not (seq-find (lambda (w)
-                                (eq prev-buf
-                                    (window-buffer w)))
-                              (window-list)))
-               (not (eq prev-buf (current-buffer))))
-      (kill-buffer prev-buf))))
 
 
 
@@ -918,14 +930,20 @@ line numbers
            (setq ,cached-val (apply (quote ,fn) ,fn-args)))
          ,cached-val))))
 
-;; this IS necessary. fuckin shit is slow without it
-;; (setq kevin-project-root "johnson")
-;; (setq kevin-project-root-timer
-;;       (run-with-idle-timer 1 t (lambda () (setq kevin-project-root (projectile-project-root)))))
-(setq kev-cached-project-root (timed-cached-funcall 1.0 projectile-project-name))
+;; Static title so Ghostty/tmux show a stable "Emacs" instead of the project
+;; name. Replaces an :eval title that called projectile on every redisplay.
+(setq frame-title-format "Emacs")
+(setq icon-title-format frame-title-format)
 
-(setq frame-title-format "Emacs"
-      icon-title-format "Emacs")
+;; frame-title-format alone does nothing under -nw: Emacs only emits a terminal
+;; title when xterm-set-window-title was non-nil at terminal-init time, and that
+;; path adds a post-command-hook. Title is constant, so send OSC 2 once per tty
+;; frame (covers emacsclient -t frames too).
+(defun kev/set-tty-window-title (&optional frame)
+  (unless (display-graphic-p frame)
+    (send-string-to-terminal "\e]2;Emacs\a" (frame-terminal frame))))
+(kev/set-tty-window-title)
+(add-hook 'after-make-frame-functions #'kev/set-tty-window-title)
 
 ;; noticed bad perf here
 (setq kev-cached-modeline-buffer-file-state
@@ -1291,6 +1309,12 @@ org-roam setup and shortcuts
                                       (s-join " -> "))))
                (s-join "|")))
 
+(defun kev/backlink-is-daily? (backlink)
+  (thread-last backlink
+               (org-roam-backlink-source-node)
+               (org-roam-node-file)
+               (org-roam-dailies--daily-note-p)))
+
 
 (after! org-roam
 
@@ -1476,7 +1500,6 @@ org-roam setup and shortcuts
 
   ;; define some keys everywhere
   (setq org-roam-v2-ack t
-        org-roam-dailies-directory "daily/"
         org-roam-preview-function #'kev/org-roam-preview)
   org-roam-node-display-template "${title}"
   ;; this doesn't get called for some reason?
@@ -1497,6 +1520,54 @@ org-roam setup and shortcuts
   ;; then when you insert the node, you'd undo the prefix when inserting.
   ;; then you don't have to worry about having super generic titles
   )
+
+#+end_src
+
+*** subnode migration
+
+so subnodes uses subnode ids, but I wanna use like "parents" or something
+
+This is a one-shot migration, so it is a function to call by hand -- e.g.
+=(kev-roam-name-subnodes "~/org-roam/some-file.org")=. It rewrites and saves the
+file it is given, so do not run it from a hook.
+
+#+begin_src elisp
+;; oh golly
+(require 'org-roam-node)
+
+(defun kev-roam-id->link (id)
+  (concat "[[id:"
+          id
+          "]["
+          (org-roam-node-title (org-roam-node-from-id id))
+          "]]"))
+
+(defun kev-roam-name-subnodes (f)
+  (with-current-buffer (find-file-noselect f)
+    (org-mode)
+    (goto-char (point-min))
+    (org-map-entries
+     (lambda ()
+       (let ((subnodes (thread-last (org-entry-properties)
+                                    (assoc "SUBNODE_OF")
+                                    (cdr))))
+         (when subnodes
+           (org-set-property
+            "PARENTS"
+            (thread-first subnodes
+                          (string-trim)
+                          (split-string " ")
+                          (thread-last
+                            (seq-filter '(lambda (s)
+                                           (not
+                                            (string= s ""))))
+                            (seq-map #'kev-roam-id->link))
+                          (string-join " ")
+                          ))))
+       )
+     nil 'file)
+    (save-buffer)
+    ))
 
 #+end_src
 
@@ -1532,9 +1603,9 @@ org ref seems better than citar! bc
 #+begin_src elisp
 
 ;; org-ref stuff
-(setq bibtex-completion-bibliography '("~/Desktop/bibliography/refs.bib")
+(setq ;; bibtex-completion-bibliography '("~/Desktop/bibliography/refs.bib")
       ;; NOTE needs the trailing slash! idk why the fudge
-      bibtex-completion-library-path '("~/Desktop/bibliography/pdfs/")
+      ;; bibtex-completion-library-path '("~/Desktop/bibliography/pdfs/")
 
       bibtex-completion-additional-search-fields '(keywords)
       ;; bibtex-completion-display-formats
@@ -1680,6 +1751,8 @@ org ref seems better than citar! bc
 #+begin_src elisp
 ;; lsp uses typescript-language-server
 ;; with npm i -g typescript-language-server
+
+;; auto set up by doom
 ;; (add-hook! typescript-mode
 ;;   (lsp)
 ;;   (lsp-mode 1)
@@ -1695,7 +1768,7 @@ org ref seems better than citar! bc
 (defvar kev/py-shell-interpreter "python3"
   "no spaces allowed! a restriction of python.el")
 
-(defvar kev/py-shell-dir "/ssh:kkrausse@diesel2:/home/kkrausse/repos/kkrausse/memory-mistral")
+(defvar kev/py-shell-dir ".")
 
 ;; (add-to-list 'display-buffer-alist '("\\*org-roam.*\\*" . (display-buffer-reuse-window display-buffer-same-window)))
 
@@ -1863,6 +1936,8 @@ nice keybindings
                  indent-region-function nil
                  cider-comment-postfix ")"
 
+        ;; sets font locking via nrepl
+        cider-font-lock-dynamically '(macro core function var deprecated)
                  clojure-toplevel-inside-comment-form t
                  ;; code alignment
                  clojure-align-forms-automatically t
@@ -1880,7 +1955,13 @@ nice keybindings
                (lsp-format-buffer)
                (clojure-align (point-min) (point-max))))
 
-           ;; (define-clojure-indent (into 1) (do-template 2) (sc.api/letsc 1) (macrolet '(1 ((:defn)) nil)))
+           ;; use put-clojure-indent (a function) instead of define-clojure-indent:
+           ;; the macro's args get eager-macroexpanded before clojure-mode loads,
+           ;; and `macrolet' collides with elisp's cl-macrolet alias
+           (put-clojure-indent 'into 1)
+           (put-clojure-indent 'do-template nil)
+           (put-clojure-indent 'sc.api/letsc 1)
+           (put-clojure-indent 'macrolet '(1 ((:defn)) nil))
            )
 
 (define-advice aggressive-indent--indent-if-changed (:around (orig-fun buffer) aggressive-indent-advice)
@@ -1928,7 +2009,7 @@ nice keybindings
                                              ")")
                                      nil
                                      (cider-defun-at-point 'bounds)
-                                     (cider--nrepl-pr-request-map)))
+                                     (cider--nrepl-pr-request-plist)))
       "en" #'cider-eval-ns-form
       "="  #'kev-format-form
       "ip" #'(lambda () (interactive) (insert "clojure.pprint/pprint")))
@@ -1949,9 +2030,6 @@ nice keybindings
      (start-file-process "babashka" "*babashka*" "bb" "--nrepl-server" "0")
      process-filter)))
 #+end_src
-
-#+RESULTS:
-: cider-jack-in-babashka
 
 lsp utils
 
@@ -2048,7 +2126,15 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
 (after! lsp-mode
   ;; (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]public\\'" "")
   (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]\\tmp\\'")
-  )
+  (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]tmp\\'")
+
+  ;; bound here rather than in lsp-mode-hook, where gb was not getting mapped
+  (map! :map lsp-command-map
+        ;; TODO maybe prefix will fix lack of docs
+        "gb" #'xref-go-back
+        "gf" #'xref-go-forward
+        "d" #'lsp-ui-doc-glance)
+  (map! :nv "SPC l" lsp-command-map))
 
 (add-hook! 'lsp-mode-hook
 
@@ -2056,14 +2142,15 @@ for code alignment, look at [[https://github.com/clojure-emacs/clojure-mode#inde
            ;; I don't think these are required?
            ;; (evil-set-command-property 'evil-ex-search-next :jump nil)
            ;; (evil-set-command-property 'evil-ex-search-backward :jump nil)
-           (map! :map lsp-command-map
-                 ;; TODO maybe prefix will fix lack of docs
-                 "gb" #'xref-go-back
-                 "gf" #'xref-go-forward
-                 "d" #'lsp-ui-doc-glance)
-           ;; don't trust this?
-           (map!
-            :nv "SPC l" lsp-command-map)
+
+           ;; changed these to be in the after portion and seemed to fix gb not being mapped
+           ;;
+           ;; (map! :map lsp-command-map
+           ;;       ;; TODO maybe prefix will fix lack of docs
+           ;;       "gb" #'xref-go-back
+           ;;       "gf" #'xref-go-forward
+           ;;       "d" #'lsp-ui-doc-glance)
+           ;; (map! :nv "SPC l" lsp-command-map)
 
            (lsp-diagnostics-mode 0)
 
