@@ -130,7 +130,9 @@ determine the exact padding."
    (modeline-bg-inactive-l `(,(doom-darken (car bg-alt) 0.2) ,@(cdr base0))))
 
   ;; base theme face overrides
-  (((all-the-icons-dblue &override) :foreground dark-cyan)
+  (;; Shared preference, formerly stored only in ~/.doom.d/custom.el.
+   ((default &override) :background "grey7")
+   ((all-the-icons-dblue &override) :foreground dark-cyan)
    (centaur-tabs-unselected :background bg-alt :foreground base6)
    (elscreen-tab-other-screen-face :background "#353a42" :foreground "#1e2022")
 

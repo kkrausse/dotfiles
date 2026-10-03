@@ -107,9 +107,6 @@ notes:
 (load-theme 'my-vibrant t)
 (setq doom-theme 'my-vibrant)
 
-;; Shared preference, formerly stored only in ~/.doom.d/custom.el.
-(custom-theme-set-faces 'my-vibrant '(default ((t (:background "grey7")))))
-
 ;;(setq doom-theme 'doom-vibrant)
 ;; TODO:
 ;; doom-vibrant, but port over my changes to just the hook
