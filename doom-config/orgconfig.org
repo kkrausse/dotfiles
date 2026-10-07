@@ -1581,6 +1581,15 @@ file it is given, so do not run it from a hook.
           ;; idk if I like this yet
           visual-fill-column-center-text nil)))
 
+;; Emacs 30: split-window keeps the old wide right margin, and visual-fill-column
+;; only recomputes it at the next redisplay. Doom's vsplit advice calls `recenter'
+;; before then on a 0-column text area, and redisplay loops forever.
+(defadvice! kev/visual-fill-column-adjust-after-split-a (new)
+  :filter-return #'split-window
+  (when (featurep 'visual-fill-column)
+    (visual-fill-column--adjust-frame (window-frame new)))
+  new)
+
 (add-hook! 'org-mode-hook :append
            ;; org roam should fix column width!
   (when (is-file-in-subdirectory org-roam-directory)
