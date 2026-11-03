@@ -23,6 +23,7 @@
 //
 // leader trigger d-left  -> ctrl+left
 // leader trigger d-right -> ctrl+right
+// leader trigger trigger -> cmd+click
 // leader trigger scroll -> delete mode: up = backspace, down = forward delete
 // (modes last LEADER.ms after the last scroll bump; any button press ends them)
 
@@ -47,6 +48,7 @@ sequence(["leader", "right-of-wheel"], key("right_option"), LEADER); // hold to 
 sequence(["leader", "d-left"], key("cmd+shift+a"), LEADER);
 sequence(["leader", "trigger", "d-left"], key("ctrl+left"), LEADER);
 sequence(["leader", "trigger", "d-right"], key("ctrl+right"), LEADER);
+sequence(["leader", "trigger", "trigger"], [key("cmd"), click("left")], LEADER); // cmd+click
 
 // ---- scroll modes ------------------------------------------------------------------
 // Momentum: macOS already accelerates the wheel (slow bump = 1, fast spin = 3, 5, ...),
