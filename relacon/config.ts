@@ -43,7 +43,7 @@ onScroll((dy, ctx) => scroll(Math.round(dy * SCROLL_SPEED), Math.round(ctx.dx * 
 bind("leader", []);
 const LEADER = { ms: 1500 };
 sequence(["leader", "leader"], click("right"), LEADER);
-sequence(["leader", "left-of-wheel"], run("open -a 'Mission Control'"), LEADER);
+sequence(["leader", "left-of-wheel"], key("ctrl+up"), LEADER);
 sequence(["leader", "right-of-wheel"], key("right_option"), LEADER); // hold to dictate
 sequence(["leader", "d-left"], key("cmd+shift+a"), LEADER);
 sequence(["leader", "trigger", "d-left"], key("ctrl+left"), LEADER);
